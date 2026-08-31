@@ -2,62 +2,68 @@ import { ProductItem, AppSettings } from '../types';
 
 export const initialAppSettings: AppSettings = {
   companyName: 'Minha Empresa & Indústria',
-  defaultTaxRegime: 'simples_nacional',
+  defaultTaxRegime: 'lucro_real',
   defaultSimplesRate: 6.5,
   defaultCardRate: 3.0,
   defaultCommissionRate: 5.0,
-  defaultMonthlyFixedOverhead: 4500,
-  defaultMonthlyGlobalVolume: 350,
+  defaultMonthlyFixedOverhead: 5500,
+  defaultMonthlyGlobalVolume: 400,
   currency: 'BRL',
 };
 
 export const defaultProducts: ProductItem[] = [
   {
     id: 'prod-1',
-    code: 'MAN-001',
+    code: 'IND-001',
     name: 'Bolsa Executiva de Couro Legítimo',
-    category: 'Manufatura / Confecção',
+    category: 'Manufatura & Indústria',
     description: 'Bolsa estruturada em couro legítimo bovino com forro acetinado e metais dourados.',
     targetSalesVolume: 80,
     directCosts: [
-      { id: 'dc-1', name: 'Couro Bovino Premium (m²)', category: 'raw_material', unit: 'm²', quantity: 0.85, unitCost: 85.00, totalCost: 72.25 },
-      { id: 'dc-2', name: 'Forro Jacquard / Cetim', category: 'raw_material', unit: 'm', quantity: 0.90, unitCost: 18.00, totalCost: 16.20 },
-      { id: 'dc-3', name: 'Metais (Zíper, Mosquetão, Rebites)', category: 'raw_material', unit: 'kit', quantity: 1, unitCost: 19.50, totalCost: 19.50 },
-      { id: 'dc-4', name: 'Caixa Rígida & Saco TNT Protetor', category: 'packaging', unit: 'un', quantity: 1, unitCost: 12.00, totalCost: 12.00 },
+      { id: 'dc-1', name: 'Couro Bovino Premium (m²)', category: 'raw_material', unit: 'm²', quantity: 0.85, unitCost: 85.00, totalCost: 72.25, hasTaxCredit: true },
+      { id: 'dc-2', name: 'Forro Jacquard / Cetim', category: 'raw_material', unit: 'm', quantity: 0.90, unitCost: 18.00, totalCost: 16.20, hasTaxCredit: true },
+      { id: 'dc-3', name: 'Metais (Zíper, Mosquetão, Rebites)', category: 'raw_material', unit: 'kit', quantity: 1, unitCost: 19.50, totalCost: 19.50, hasTaxCredit: true },
+      { id: 'dc-4', name: 'Caixa Rígida & Saco TNT Protetor', category: 'packaging', unit: 'un', quantity: 1, unitCost: 12.00, totalCost: 12.00, hasTaxCredit: true },
       { id: 'dc-5', name: 'Mão de Obra Direta (Corte e Costura 2.5h)', category: 'direct_labor', unit: 'horas', quantity: 2.5, unitCost: 24.00, totalCost: 60.00 },
     ],
     ggfItems: [
-      { id: 'ggf-1', name: 'Energia Elétrica das Máquinas de Costura', category: 'energy', allocationType: 'percentage_direct_cost', value: 3.5, calculatedUnitCost: 6.30 },
+      { id: 'ggf-1', name: 'Energia Elétrica das Máquinas de Costura', category: 'energy', allocationType: 'percentage_direct_cost', value: 3.5, calculatedUnitCost: 6.30, hasTaxCredit: true },
       { id: 'ggf-2', name: 'Aluguel do Ateliê/Galpão Rateado', category: 'rent', allocationType: 'fixed_monthly_rate', value: 1200, calculatedUnitCost: 15.00 },
       { id: 'ggf-3', name: 'Depreciação & Manutenção Maquinário', category: 'depreciation', allocationType: 'fixed_per_unit', value: 4.50, calculatedUnitCost: 4.50 },
       { id: 'ggf-4', name: 'Supervisão de Produção e Controle de Qualidade', category: 'supervision', allocationType: 'percentage_direct_cost', value: 2.0, calculatedUnitCost: 3.60 },
     ],
     fixedExpenseAllocation: {
-      monthlyFixedExpenses: 3500,
-      estimatedMonthlyVolume: 250,
-      costPerUnit: 14.00,
+      monthlyFixedExpenses: 4500,
+      estimatedMonthlyVolume: 300,
+      costPerUnit: 15.00,
     },
     taxSettings: {
-      regime: 'simples_nacional',
-      simplesRate: 7.8, // Anexo II Indústria
-      icms: 0,
-      pis: 0,
-      cofins: 0,
-      ipi: 0,
+      regime: 'lucro_real',
+      simplesRate: 0,
+      icms: 18.0, // ICMS Venda 18%
+      pis: 1.65, // PIS Não-Cumulativo 1.65%
+      cofins: 7.60, // COFINS Não-Cumulativo 7.60%
+      ipi: 5.0, // IPI Indústria 5%
       iss: 0,
       irpjCsll: 0,
+      takeRawMaterialTaxCredits: true, // Aproveitamento de Créditos Fiscais na Entrada
+      pisCreditRate: 1.65,
+      cofinsCreditRate: 7.60,
+      icmsCreditRate: 12.0, // Crédito médio ICMS insumos
+      ipiCreditRate: 5.0,
+      totalIrpjCsllRealRate: 34.0, // 34% (15%+10% IRPJ + 9% CSLL sobre Lucro Real)
       customTaxRate: 0,
-      totalTaxRate: 7.8,
+      totalTaxRate: 32.25, // 18% + 1.65% + 7.60% + 5%
     },
     variableExpenses: {
       salesCommissionRate: 4.0,
-      cardGatewayRate: 3.2,
+      cardGatewayRate: 2.8,
       marketplacePlatformRate: 0,
       shippingUnitCost: 0,
       otherVariableRate: 1.0,
-      totalVariableRate: 8.2,
+      totalVariableRate: 7.8,
     },
-    desiredProfitMargin: 24.0, // 24% de margem líquida
+    desiredProfitMargin: 20.0, // 20% de margem líquida real final
     pricingMethod: 'markup_divisor',
     receivableDays: 30,
     payableDays: 20,
@@ -66,65 +72,70 @@ export const defaultProducts: ProductItem[] = [
   },
   {
     id: 'prod-2',
-    code: 'ALI-002',
-    name: 'Bolo Vulcão Ninho c/ Creme de Avelã 1.2kg',
-    category: 'Alimentação & Confeitaria',
-    description: 'Bolo artesanal com massa amanteigada, cobertura vulcânica cremosa e avelã.',
+    code: 'IND-002',
+    name: 'Linha de Panificação & Tortas Gourmet 1.5kg',
+    category: 'Indústria Alimentícia',
+    description: 'Produto alimentício de fabricação industrial com insumos primários e cadeia fria.',
     targetSalesVolume: 180,
     directCosts: [
-      { id: 'dc-201', name: 'Leite Condensado & Creme de Leite (3 latas)', category: 'raw_material', unit: 'kit', quantity: 1, unitCost: 19.80, totalCost: 19.80 },
-      { id: 'dc-202', name: 'Leite Ninho em Pó e Chocolate Nobre', category: 'raw_material', unit: 'g', quantity: 250, unitCost: 0.05, totalCost: 12.50 },
-      { id: 'dc-203', name: 'Farinha, Ovos, Manteiga e Fermento', category: 'raw_material', unit: 'receita', quantity: 1, unitCost: 8.50, totalCost: 8.50 },
-      { id: 'dc-204', name: 'Embalagem Boleira c/ Tampa Alta Cristal + Fita', category: 'packaging', unit: 'un', quantity: 1, unitCost: 4.20, totalCost: 4.20 },
-      { id: 'dc-205', name: 'Mão de Obra de Preparo & Confeiteira (45min)', category: 'direct_labor', unit: 'horas', quantity: 0.75, unitCost: 20.00, totalCost: 15.00 },
+      { id: 'dc-201', name: 'Laticínios & Insumos Base', category: 'raw_material', unit: 'kit', quantity: 1, unitCost: 22.80, totalCost: 22.80, hasTaxCredit: true },
+      { id: 'dc-202', name: 'Ingredientes Nobres & Chocolates', category: 'raw_material', unit: 'g', quantity: 300, unitCost: 0.06, totalCost: 18.00, hasTaxCredit: true },
+      { id: 'dc-203', name: 'Farinha, Ovos e Fermentos Especiais', category: 'raw_material', unit: 'receita', quantity: 1, unitCost: 10.50, totalCost: 10.50, hasTaxCredit: true },
+      { id: 'dc-204', name: 'Embalagem Rígida Termoselada com Barreira', category: 'packaging', unit: 'un', quantity: 1, unitCost: 4.50, totalCost: 4.50, hasTaxCredit: true },
+      { id: 'dc-205', name: 'Mão de Obra de Produção (1h)', category: 'direct_labor', unit: 'horas', quantity: 1.0, unitCost: 22.00, totalCost: 22.00 },
     ],
     ggfItems: [
-      { id: 'ggf-201', name: 'Gás de Cozinha & Forno Elétrico', category: 'energy', allocationType: 'fixed_per_unit', value: 3.80, calculatedUnitCost: 3.80 },
-      { id: 'ggf-202', name: 'Água e Produtos de Higienização de Cozinha', category: 'maintenance', allocationType: 'fixed_per_unit', value: 1.50, calculatedUnitCost: 1.50 },
-      { id: 'ggf-203', name: 'Depreciação de Batedeiras e Fornos', category: 'depreciation', allocationType: 'fixed_per_unit', value: 1.20, calculatedUnitCost: 1.20 },
+      { id: 'ggf-201', name: 'Gás Industrial & Forno Elétrico Contínuo', category: 'energy', allocationType: 'fixed_per_unit', value: 4.80, calculatedUnitCost: 4.80, hasTaxCredit: true },
+      { id: 'ggf-202', name: 'Água Industrial e Higienização Sanitária', category: 'maintenance', allocationType: 'fixed_per_unit', value: 2.00, calculatedUnitCost: 2.00 },
+      { id: 'ggf-203', name: 'Depreciação de Câmaras Frias e Misturadores', category: 'depreciation', allocationType: 'fixed_per_unit', value: 2.50, calculatedUnitCost: 2.50 },
     ],
     fixedExpenseAllocation: {
-      monthlyFixedExpenses: 2800,
+      monthlyFixedExpenses: 3800,
       estimatedMonthlyVolume: 350,
-      costPerUnit: 8.00,
+      costPerUnit: 10.85,
     },
     taxSettings: {
-      regime: 'simples_nacional',
-      simplesRate: 4.0, // Anexo I Comércio / Alimentação
-      icms: 0,
-      pis: 0,
-      cofins: 0,
-      ipi: 0,
+      regime: 'lucro_real',
+      simplesRate: 0,
+      icms: 12.0, // ICMS cesta / produtos alimentícios
+      pis: 1.65,
+      cofins: 7.60,
+      ipi: 0, // Isento IPI
       iss: 0,
       irpjCsll: 0,
+      takeRawMaterialTaxCredits: true,
+      pisCreditRate: 1.65,
+      cofinsCreditRate: 7.60,
+      icmsCreditRate: 12.0,
+      totalIrpjCsllRealRate: 34.0,
       customTaxRate: 0,
-      totalTaxRate: 4.0,
+      totalTaxRate: 21.25, // 12% + 1.65% + 7.60%
     },
     variableExpenses: {
-      salesCommissionRate: 2.0,
-      cardGatewayRate: 2.5,
+      salesCommissionRate: 3.0,
+      cardGatewayRate: 2.2,
       marketplacePlatformRate: 0,
       shippingUnitCost: 0,
-      otherVariableRate: 1.5,
-      totalVariableRate: 6.0,
+      otherVariableRate: 1.0,
+      totalVariableRate: 6.2,
     },
-    desiredProfitMargin: 26.0,
+    desiredProfitMargin: 18.0,
     pricingMethod: 'markup_divisor',
-    receivableDays: 0, // Recebimento à vista no ato
-    payableDays: 10,
+    receivableDays: 15,
+    payableDays: 20,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
   {
     id: 'prod-3',
-    code: 'REV-003',
+    code: 'COM-003',
     name: 'Kit Teclado Mecânico RGB Wireless Switch Red',
-    category: 'Comércio / E-commerce',
+    category: 'Comércio / Distribuição',
     description: 'Teclado mecânico compacto 75% hot-swappable para produtividade e jogos.',
     targetSalesVolume: 120,
     directCosts: [
-      { id: 'dc-301', name: 'Custo de Aquisição com Fornecedor', category: 'raw_material', unit: 'un', quantity: 1, unitCost: 145.00, totalCost: 145.00 },
-      { id: 'dc-302', name: 'Caixa de Envio Reforçada + Fita Gomada', category: 'packaging', unit: 'un', quantity: 1, unitCost: 4.80, totalCost: 4.80 },
+      { id: 'dc-301', name: 'Custo de Aquisição com Fornecedor Nacional', category: 'raw_material', unit: 'un', quantity: 1, unitCost: 145.00, totalCost: 145.00, hasTaxCredit: true },
+      { id: 'dc-302', name: 'Caixa de Envio Reforçada + Fita Gomada', category: 'packaging', unit: 'un', quantity: 1, unitCost: 4.80, totalCost: 4.80, hasTaxCredit: true },
       { id: 'dc-303', name: 'Etiquetagem, Conferência e Teste de Bancada', category: 'direct_labor', unit: 'horas', quantity: 0.25, unitCost: 20.00, totalCost: 5.00 },
     ],
     ggfItems: [
@@ -137,26 +148,31 @@ export const defaultProducts: ProductItem[] = [
       costPerUnit: 10.50,
     },
     taxSettings: {
-      regime: 'simples_nacional',
-      simplesRate: 6.5,
-      icms: 0,
-      pis: 0,
-      cofins: 0,
+      regime: 'lucro_real',
+      simplesRate: 0,
+      icms: 18.0,
+      pis: 1.65,
+      cofins: 7.60,
       ipi: 0,
       iss: 0,
       irpjCsll: 0,
+      takeRawMaterialTaxCredits: true,
+      pisCreditRate: 1.65,
+      cofinsCreditRate: 7.60,
+      icmsCreditRate: 12.0,
+      totalIrpjCsllRealRate: 34.0,
       customTaxRate: 0,
-      totalTaxRate: 6.5,
+      totalTaxRate: 27.25, // 18% + 1.65% + 7.60%
     },
     variableExpenses: {
       salesCommissionRate: 2.0,
-      cardGatewayRate: 0, // Cobrado pelo marketplace
-      marketplacePlatformRate: 14.0, // Taxa do Mercado Livre / Shopee
-      shippingUnitCost: 18.50, // Frete grátis subsidiado ao cliente
+      cardGatewayRate: 0,
+      marketplacePlatformRate: 14.0, // Taxa do Marketplace
+      shippingUnitCost: 18.50, // Frete grátis subsidiado
       otherVariableRate: 1.0,
       totalVariableRate: 17.0,
     },
-    desiredProfitMargin: 18.0,
+    desiredProfitMargin: 15.0,
     pricingMethod: 'markup_divisor',
     receivableDays: 14,
     payableDays: 30,

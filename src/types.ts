@@ -10,6 +10,7 @@ export interface DirectCostItem {
   quantity: number;
   unitCost: number;
   totalCost: number;
+  hasTaxCredit?: boolean; // Se gera crédito de PIS/COFINS/ICMS no Lucro Real
 }
 
 export type GGFAllocationType = 'percentage_direct_cost' | 'fixed_monthly_rate' | 'fixed_per_unit';
@@ -21,17 +22,29 @@ export interface GGFItem {
   allocationType: GGFAllocationType;
   value: number; // % or R$ per month or R$ per unit
   calculatedUnitCost: number;
+  hasTaxCredit?: boolean; // Ex: energia elétrica gera crédito de PIS/COFINS no Lucro Real
 }
 
 export interface TaxSettings {
   regime: TaxRegime;
   simplesRate: number; // % effective rate
-  icms: number; // %
-  pis: number; // %
-  cofins: number; // %
-  ipi: number; // %
-  iss: number; // %
-  irpjCsll: number; // %
+  icms: number; // % sobre vendas (ex: 18% ou 12%)
+  pis: number; // % sobre vendas (Lucro Real: 1.65%, Lucro Presumido: 0.65%)
+  cofins: number; // % sobre vendas (Lucro Real: 7.60%, Lucro Presumido: 3.00%)
+  ipi: number; // % sobre vendas para indústria (ex: 5% a 15%)
+  iss: number; // % sobre serviços (ex: 2% a 5%)
+  irpjCsll: number; // % para Lucro Presumido (presunção) ou provisão estimada
+  
+  // Específicos para Lucro Real (Regime Não-Cumulativo):
+  takeRawMaterialTaxCredits?: boolean; // Se desconta créditos de PIS/COFINS e ICMS na entrada de insumos
+  pisCreditRate?: number; // % crédito PIS nos insumos (padrão 1.65%)
+  cofinsCreditRate?: number; // % crédito COFINS nos insumos (padrão 7.60%)
+  icmsCreditRate?: number; // % crédito ICMS nos insumos (ex: 12% ou 18%)
+  ipiCreditRate?: number; // % crédito IPI nos insumos (ex: 5% ou 0%)
+  irpjRealRate?: number; // 15% + 10% adicional = até 25% sobre o LAIR
+  csllRealRate?: number; // 9% sobre o LAIR
+  totalIrpjCsllRealRate?: number; // Padrão 34% sobre o Lucro Antes do IR/CSLL (LAIR)
+
   customTaxRate: number; // %
   totalTaxRate: number; // % total effective on gross revenue
 }
@@ -73,6 +86,15 @@ export interface CalculationResult {
   // Total Unit Cost (Custo Integral Unitário)
   totalUnitCost: number;
 
+  // Lucro Real Non-Cumulative Tax Credits on Raw Materials & Energy
+  isLucroReal: boolean;
+  totalTaxCreditsUnit: number; // Créditos fiscais recuperáveis (PIS 1.65% + COFINS 7.6% + ICMS)
+  rawMaterialTaxCreditsAmount: number; // Alias para totalTaxCreditsUnit
+  pisTaxCreditUnit: number;
+  cofinsTaxCreditUnit: number;
+  icmsTaxCreditUnit: number;
+  netDirectCostsAfterCredits: number; // Custo Direto Líquido após créditos
+
   // Deduction Rates on Gross Price
   totalDeductionsRate: number; // Taxes% + Variable Costs% + Desired Profit Margin%
   totalTaxRate: number;
@@ -87,20 +109,31 @@ export interface CalculationResult {
   // Financial Breakdown of Final Selling Price (DRE Unitária)
   grossRevenue: number;
   taxesAmount: number;
+  icmsAmount: number;
+  pisAmount: number;
+  cofinsAmount: number;
+  ipiAmount: number;
+  issAmount: number;
   netRevenue: number;
   variableExpensesAmount: number;
   contributionMarginAmount: number; // Net Revenue - Direct Costs - GGF
   contributionMarginRate: number; // Contribution Margin / Gross Revenue (%)
   fixedExpensesAmount: number;
-  netProfitAmount: number; // Lucro Líquido Unitário (R$)
-  netProfitRate: number; // Margem Líquida Efetiva (%)
+
+  // Lucro Real Specifics (LAIR & IRPJ/CSLL 34% sobre o Lucro Real)
+  lairAmount: number; // Lucro Antes do IRPJ e CSLL (R$)
+  lairRate: number; // % LAIR sobre a receita
+  irpjCsllProfitTaxAmount: number; // Provisão de 34% (15%+10% IRPJ + 9% CSLL) sobre o Lucro Real
+  irpjCsllRealAmount: number; // Alias para irpjCsllProfitTaxAmount
+  netProfitAmount: number; // Lucro Líquido Unitário Final (R$)
+  netProfitRate: number; // Margem Líquida Efetiva Final (%)
 
   // Key Indicators
   markupMultiplier: number; // Preço / Custo Direto
   markupOverTotalCost: number; // Preço / Custo Integral
   breakEvenQuantity: number; // Ponto de Equilíbrio em Unidades
   breakEvenRevenue: number; // Ponto de Equilíbrio em Faturamento (R$)
-  maximumDiscountRate: number; // % máximo de desconto antes do prejuízo (até margem de contribuição zerar ou lucro zerar)
+  maximumDiscountRate: number; // % máximo de desconto antes do prejuízo
 }
 
 export interface ProductItem {

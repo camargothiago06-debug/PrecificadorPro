@@ -94,16 +94,22 @@ export const GgfTaxGuideModal: React.FC<GgfTaxGuideModalProps> = ({ isOpen, onCl
             </h3>
             <div className="space-y-2 pt-1">
               <div className="flex items-start gap-2">
+                <span className="font-bold text-emerald-900 min-w-[130px]">• Lucro Real:</span>
+                <span>
+                  Regime Não-Cumulativo onde <b>PIS (1,65%)</b> e <b>COFINS (7,60%)</b> incidem sobre o faturamento, mas você <b>recupera créditos fiscais (9,25% + ICMS)</b> sobre as compras de matérias-primas e energia elétrica industrial. Além disso, o <b>IRPJ e CSLL (34%)</b> incidem apenas sobre o lucro contábil apurado (LAIR), e não sobre a receita bruta.
+                </span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="font-bold text-slate-900 min-w-[130px]">• Lucro Presumido:</span>
+                <span>Impostos federais cumulativos (PIS 0.65%, COFINS 3%, IRPJ/CSLL presumidos) + ICMS estadual ou ISS municipal sem aproveitamento de créditos na entrada.</span>
+              </div>
+              <div className="flex items-start gap-2">
                 <span className="font-bold text-slate-900 min-w-[130px]">• Simples Nacional:</span>
                 <span>Alíquota única consolidada na guia DAS (varia de ~4% para comércio inicial a ~7.8% para indústrias/confecções).</span>
               </div>
               <div className="flex items-start gap-2">
-                <span className="font-bold text-slate-900 min-w-[130px]">• Lucro Presumido:</span>
-                <span>Impostos federais (PIS 0.65%, COFINS 3%, IRPJ/CSLL presumidos) + ICMS estadual ou ISS municipal.</span>
-              </div>
-              <div className="flex items-start gap-2">
                 <span className="font-bold text-slate-900 min-w-[130px]">• MEI:</span>
-                <span>Valor fixo mensal na guia DAS-MEI (alíquota efetiva por venda praticamente zero até o teto de R$ 81 mil/ano).</span>
+                <span>Valor fixo mensal na guia DAS-MEI (alíquota efetiva por venda praticamente zero até o teto anual).</span>
               </div>
             </div>
           </div>

@@ -93,16 +93,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   // Taxes
   const [taxSettings, setTaxSettings] = useState<TaxSettings>(
     initialProduct?.taxSettings || {
-      regime: 'simples_nacional',
-      simplesRate: 6.5,
-      icms: 0,
-      pis: 0,
-      cofins: 0,
-      ipi: 0,
+      regime: 'lucro_real',
+      simplesRate: 0,
+      icms: 18.0,
+      pis: 1.65,
+      cofins: 7.60,
+      ipi: 5.0,
       iss: 0,
       irpjCsll: 0,
+      takeRawMaterialTaxCredits: true,
+      pisCreditRate: 1.65,
+      cofinsCreditRate: 7.60,
+      icmsCreditRate: 12.0,
+      ipiCreditRate: 5.0,
+      totalIrpjCsllRealRate: 34.0,
       customTaxRate: 0,
-      totalTaxRate: 6.5,
+      totalTaxRate: 32.25,
     }
   );
 
@@ -818,16 +824,58 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Regime Tributário</label>
                       <select
                         value={taxSettings.regime}
-                        onChange={(e) => setTaxSettings({ ...taxSettings, regime: e.target.value as TaxRegime })}
-                        className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-semibold"
+                        onChange={(e) => {
+                          const reg = e.target.value as TaxRegime;
+                          if (reg === 'lucro_real') {
+                            setTaxSettings({
+                              ...taxSettings,
+                              regime: 'lucro_real',
+                              simplesRate: 0,
+                              icms: 18.0,
+                              pis: 1.65,
+                              cofins: 7.60,
+                              ipi: 5.0,
+                              takeRawMaterialTaxCredits: true,
+                              pisCreditRate: 1.65,
+                              cofinsCreditRate: 7.60,
+                              icmsCreditRate: 12.0,
+                              ipiCreditRate: 5.0,
+                              totalIrpjCsllRealRate: 34.0,
+                              totalTaxRate: 32.25,
+                            });
+                          } else if (reg === 'simples_nacional') {
+                            setTaxSettings({
+                              ...taxSettings,
+                              regime: 'simples_nacional',
+                              simplesRate: 6.5,
+                              totalTaxRate: 6.5,
+                              takeRawMaterialTaxCredits: false,
+                            });
+                          } else {
+                            setTaxSettings({ ...taxSettings, regime: reg });
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-bold focus:ring-2 focus:ring-emerald-500"
                       >
-                        <option value="simples_nacional">Simples Nacional (Anexo I Comércio / II Indústria / III)</option>
+                        <option value="lucro_real">⭐ Lucro Real (Regime Não-Cumulativo PIS/COFINS + IRPJ/CSLL 34%)</option>
+                        <option value="lucro_presumido">Lucro Presumido (Cumulativo 3.65% PIS/COFINS + ICMS)</option>
+                        <option value="simples_nacional">Simples Nacional (DAS Unificado)</option>
                         <option value="mei">MEI (Microempreendedor Individual)</option>
-                        <option value="lucro_presumido">Lucro Presumido (ICMS, PIS, COFINS, IRPJ/CSLL)</option>
-                        <option value="lucro_real">Lucro Real</option>
                         <option value="custom">Alíquota Efetiva Personalizada (%)</option>
                       </select>
                     </div>
+
+                    {taxSettings.regime === 'lucro_real' && (
+                      <div className="bg-emerald-50/80 border border-emerald-200 rounded-xl p-2.5 text-xs">
+                        <div className="flex items-center gap-1.5 text-emerald-900 font-bold">
+                          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Empresa em Regime de Lucro Real</span>
+                        </div>
+                        <p className="text-[11px] text-emerald-700 mt-0.5 leading-relaxed">
+                          PIS/COFINS Não-Cumulativo (9,25%), ICMS/IPI com aproveitamento de créditos fiscais nos insumos e IRPJ/CSLL (34%) sobre o lucro contábil (LAIR).
+                        </p>
+                      </div>
+                    )}
 
                     {taxSettings.regime === 'simples_nacional' && (
                       <div>
@@ -884,6 +932,145 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Lucro Real Specific Settings */}
+                  {taxSettings.regime === 'lucro_real' && (
+                    <div className="space-y-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Alíquotas de Saída (Faturamento / NF)</span>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setTaxSettings({
+                              ...taxSettings,
+                              icms: 18.0,
+                              pis: 1.65,
+                              cofins: 7.60,
+                              ipi: 5.0,
+                              takeRawMaterialTaxCredits: true,
+                              pisCreditRate: 1.65,
+                              cofinsCreditRate: 7.60,
+                              icmsCreditRate: 12.0,
+                              ipiCreditRate: 5.0,
+                              totalIrpjCsllRealRate: 34.0,
+                            })}
+                            className="text-[10px] px-2 py-0.5 bg-white border border-slate-200 rounded-md font-semibold text-slate-700 hover:bg-slate-100"
+                          >
+                            Preset Indústria
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTaxSettings({
+                              ...taxSettings,
+                              icms: 18.0,
+                              pis: 1.65,
+                              cofins: 7.60,
+                              ipi: 0,
+                              takeRawMaterialTaxCredits: true,
+                              pisCreditRate: 1.65,
+                              cofinsCreditRate: 7.60,
+                              icmsCreditRate: 12.0,
+                              ipiCreditRate: 0,
+                              totalIrpjCsllRealRate: 34.0,
+                            })}
+                            className="text-[10px] px-2 py-0.5 bg-white border border-slate-200 rounded-md font-semibold text-slate-700 hover:bg-slate-100"
+                          >
+                            Preset Comércio
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-1">ICMS Saída (%)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={taxSettings.icms}
+                            onChange={(e) => setTaxSettings({ ...taxSettings, icms: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-1">PIS Saída (1,65%)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={taxSettings.pis}
+                            onChange={(e) => setTaxSettings({ ...taxSettings, pis: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-1">COFINS Saída (7,60%)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={taxSettings.cofins}
+                            onChange={(e) => setTaxSettings({ ...taxSettings, cofins: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-800"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-600 mb-1">IPI Indústria (%)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={taxSettings.ipi || 0}
+                            onChange={(e) => setTaxSettings({ ...taxSettings, ipi: parseFloat(e.target.value) || 0 })}
+                            className="w-full px-2 py-1.5 text-xs bg-white border border-slate-200 rounded-lg font-mono font-bold text-slate-800"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Lucro Real Non-Cumulative Credits Toggle & Rates */}
+                      <div className="pt-2 border-t border-slate-200/80 space-y-2">
+                        <label className="flex items-start gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={taxSettings.takeRawMaterialTaxCredits ?? true}
+                            onChange={(e) => setTaxSettings({ ...taxSettings, takeRawMaterialTaxCredits: e.target.checked })}
+                            className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                          />
+                          <div>
+                            <span className="text-xs font-bold text-slate-800">
+                              Aproveitar Créditos de PIS/COFINS (9,25%) e ICMS/IPI nos Insumos e Energia (Não-cumulativo)
+                            </span>
+                            <p className="text-[11px] text-slate-500">
+                              Reduz o custo contábil dos insumos e energia através do abatimento direto dos créditos fiscais de entrada.
+                            </p>
+                          </div>
+                        </label>
+
+                        {taxSettings.takeRawMaterialTaxCredits && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 pl-6">
+                            <div>
+                              <label className="block text-[10px] text-slate-500 font-semibold">Crédito PIS + COFINS Entradas (%)</label>
+                              <div className="text-xs font-mono font-bold text-emerald-700 bg-white px-2 py-1 border border-slate-200 rounded-md">
+                                {((taxSettings.pisCreditRate || 1.65) + (taxSettings.cofinsCreditRate || 7.60)).toFixed(2)}% (1.65% + 7.60%)
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-slate-500 font-semibold">Crédito Médio ICMS Insumos (%)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={taxSettings.icmsCreditRate || 12.0}
+                                onChange={(e) => setTaxSettings({ ...taxSettings, icmsCreditRate: parseFloat(e.target.value) || 0 })}
+                                className="w-full px-2 py-1 text-xs bg-white border border-slate-200 rounded-md font-mono font-bold text-emerald-700"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] text-slate-500 font-semibold">IRPJ + CSLL s/ Lucro Real (LAIR)</label>
+                              <div className="text-xs font-mono font-bold text-rose-700 bg-white px-2 py-1 border border-slate-200 rounded-md">
+                                {taxSettings.totalIrpjCsllRealRate || 34.0}% (15% + 10% + 9%)
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {taxSettings.regime === 'lucro_presumido' && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
@@ -1189,7 +1376,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
 
                   <div className="py-1.5 flex justify-between text-rose-600">
-                    <span>(-) Impostos ({formatPercent(calc.totalTaxRate)})</span>
+                    <span>(-) Impostos s/ Vendas ({formatPercent(calc.totalTaxRate)})</span>
                     <span>-{formatCurrencyBRL(calc.taxesAmount)}</span>
                   </div>
 
@@ -1203,13 +1390,20 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <span>-{formatCurrencyBRL(calc.totalDirectCosts)}</span>
                   </div>
 
+                  {calc.rawMaterialTaxCreditsAmount > 0 && (
+                    <div className="py-1 flex justify-between text-emerald-700 bg-emerald-50/50 px-1 rounded text-[11px]">
+                      <span>(+) Créditos Fiscais Entrada (PIS/COFINS/ICMS)</span>
+                      <span>+{formatCurrencyBRL(calc.rawMaterialTaxCreditsAmount)}</span>
+                    </div>
+                  )}
+
                   <div className="py-1.5 flex justify-between text-purple-700">
                     <span>(-) GGF (Gastos Gerais Indiretos)</span>
                     <span>-{formatCurrencyBRL(calc.totalGgfUnitCost)}</span>
                   </div>
 
                   <div className="py-1.5 flex justify-between text-amber-700">
-                    <span>(-) Comissões / Taxas Cartão</span>
+                    <span>(-) Despesas Variáveis (Comissões/Taxas)</span>
                     <span>-{formatCurrencyBRL(calc.variableExpensesAmount)}</span>
                   </div>
 
@@ -1223,10 +1417,29 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <span>-{formatCurrencyBRL(calc.totalFixedExpensesUnit)}</span>
                   </div>
 
-                  <div className="py-2 flex justify-between font-black text-sm text-emerald-700 bg-emerald-50 px-2 rounded-lg mt-1">
-                    <span>(=) Lucro Líquido Unitário</span>
-                    <span>{formatCurrencyBRL(calc.netProfitAmount)}</span>
-                  </div>
+                  {taxSettings.regime === 'lucro_real' ? (
+                    <>
+                      <div className="py-1.5 flex justify-between font-bold text-slate-800 bg-amber-50/60 px-1 rounded">
+                        <span>(=) LAIR (Lucro Antes do IRPJ/CSLL)</span>
+                        <span>{formatCurrencyBRL(calc.lairAmount)}</span>
+                      </div>
+
+                      <div className="py-1.5 flex justify-between text-rose-700">
+                        <span>(-) Provisão IRPJ & CSLL (34% Lucro Real)</span>
+                        <span>-{formatCurrencyBRL(calc.irpjCsllRealAmount)}</span>
+                      </div>
+
+                      <div className="py-2 flex justify-between font-black text-sm text-emerald-700 bg-emerald-50 px-2 rounded-lg mt-1">
+                        <span>(=) Lucro Líquido Real Unitário</span>
+                        <span>{formatCurrencyBRL(calc.netProfitAmount)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="py-2 flex justify-between font-black text-sm text-emerald-700 bg-emerald-50 px-2 rounded-lg mt-1">
+                      <span>(=) Lucro Líquido Unitário</span>
+                      <span>{formatCurrencyBRL(calc.netProfitAmount)}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

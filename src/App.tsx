@@ -118,7 +118,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-[1680px] w-full mx-auto px-4 sm:px-6 lg:px-10 py-8">
         {activeTab === 'catalog' && (
           <ProductCatalog
             products={products}
@@ -137,25 +137,25 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200/80 bg-white py-4 mt-auto print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-700">Precificador Pro</span>
-            <span>•</span>
-            <span>Formação de Preço Contábil (Markup Divisor & GGF) & Fluxo de Caixa</span>
+      <footer className="border-t border-slate-200/80 bg-white py-5 mt-auto print:hidden">
+        <div className="max-w-[1680px] mx-auto px-4 sm:px-6 lg:px-10 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
+          <div className="flex items-center gap-2.5">
+            <span className="font-bold text-slate-800 text-base">Precificador Pro</span>
+            <span className="text-slate-300">•</span>
+            <span className="font-medium text-slate-600">Formação de Preço Contábil (Markup Divisor & GGF) & Fluxo de Caixa</span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={handleResetDefaults}
-              className="hover:text-slate-800 flex items-center gap-1 text-[11px] text-slate-400 hover:underline"
+              className="hover:text-slate-900 flex items-center gap-1.5 text-xs text-slate-500 hover:underline font-semibold"
               title="Restaurar dados de exemplo"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-3.5 h-3.5" />
               <span>Restaurar Exemplos</span>
             </button>
-            <span>•</span>
-            <span>Todos os cálculos em conformidade contábil e fiscal</span>
+            <span className="text-slate-300">•</span>
+            <span className="text-xs text-slate-400">Todos os cálculos em conformidade contábil e fiscal</span>
           </div>
         </div>
       </footer>
