@@ -159,8 +159,15 @@ export interface ProductItem {
   manualSalePrice?: number; // Preço de venda manual para simulação
   
   // Cash Flow parameters
-  receivableDays: number; // Dias médios para receber o valor das vendas (ex: 30 dias)
-  payableDays: number; // Dias médios para pagar fornecedores de insumo (ex: 15 dias)
+  receivableDays: number; // Dias médios para receber o valor das vendas (ex: 45 dias para 30/60)
+  receivableTermsType?: string; // ex: '30_60', '30_60_90', '30_60_90_120', 'custom', 'a_vista'
+  receivableTermsCustom?: string; // string digitada pelo usuário, ex: '30/60/90'
+  receivableInstallments?: number[]; // array de dias das parcelas, ex: [30, 60, 90]
+  
+  payableDays: number; // Dias médios para pagar fornecedores de insumo (ex: 30 dias)
+  payableTermsType?: string;
+  payableTermsCustom?: string;
+  payableInstallments?: number[]; // array de dias das parcelas de pagamento, ex: [30, 60]
   
   createdAt: string;
   updatedAt: string;

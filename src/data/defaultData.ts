@@ -65,8 +65,12 @@ export const defaultProducts: ProductItem[] = [
     },
     desiredProfitMargin: 20.0, // 20% de margem líquida real final
     pricingMethod: 'markup_divisor',
-    receivableDays: 30,
-    payableDays: 20,
+    receivableDays: 60, // Média de 30/60/90 = 60 dias
+    receivableTermsType: '30_60_90',
+    receivableInstallments: [30, 60, 90],
+    payableDays: 45, // Média de 30/60 = 45 dias
+    payableTermsType: '30_60',
+    payableInstallments: [30, 60],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -121,8 +125,12 @@ export const defaultProducts: ProductItem[] = [
     },
     desiredProfitMargin: 18.0,
     pricingMethod: 'markup_divisor',
-    receivableDays: 15,
-    payableDays: 20,
+    receivableDays: 45, // Média de 30/60 = 45 dias
+    receivableTermsType: '30_60',
+    receivableInstallments: [30, 60],
+    payableDays: 30, // 30 dias
+    payableTermsType: '30d',
+    payableInstallments: [30],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -174,8 +182,12 @@ export const defaultProducts: ProductItem[] = [
     },
     desiredProfitMargin: 15.0,
     pricingMethod: 'markup_divisor',
-    receivableDays: 14,
-    payableDays: 30,
+    receivableDays: 75, // Média de 30/60/90/120 = 75 dias
+    receivableTermsType: '30_60_90_120',
+    receivableInstallments: [30, 60, 90, 120],
+    payableDays: 60, // Média de 30/60/90 = 60 dias
+    payableTermsType: '30_60_90',
+    payableInstallments: [30, 60, 90],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },

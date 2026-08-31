@@ -12,10 +12,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
-  Eye
+  Eye,
+  Clock
 } from 'lucide-react';
 import { ProductItem } from '../types';
 import { calculateProductPricing, formatCurrencyBRL, formatPercent } from '../utils/pricingCalculator';
+import { formatTermDisplay } from '../utils/paymentTerms';
 
 interface ProductCardProps {
   product: ProductItem;
@@ -265,6 +267,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <div className="text-right">
             <span className="text-slate-600 text-xs font-medium">Lucro Projetado: </span>
             <span className="font-extrabold text-emerald-800 font-mono text-sm">{formatCurrencyBRL(monthlyNetProfit)}/mês</span>
+          </div>
+        </div>
+
+        {/* Payment & Receipt Terms Indicator */}
+        <div className="mt-2.5 flex items-center justify-between px-3 py-2 rounded-xl bg-slate-100/90 border border-slate-200/80 text-[11px]">
+          <div className="flex items-center gap-1.5 text-slate-600 font-medium">
+            <Clock className="w-3.5 h-3.5 text-indigo-600" />
+            <span>Prazos:</span>
+          </div>
+          <div className="flex items-center gap-2 font-mono text-[11px]">
+            <span className="text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded font-bold" title="Prazo de Recebimento das Vendas">
+              Rec: {formatTermDisplay(product.receivableTermsType || `${product.receivableDays || 30}d`, product.receivableInstallments, product.receivableDays)}
+            </span>
+            <span className="text-blue-700 bg-blue-100/70 px-1.5 py-0.5 rounded font-bold" title="Prazo de Pagamento aos Fornecedores">
+              Pag: {formatTermDisplay(product.payableTermsType || `${product.payableDays || 15}d`, product.payableInstallments, product.payableDays)}
+            </span>
           </div>
         </div>
 

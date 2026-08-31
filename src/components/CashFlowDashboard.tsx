@@ -13,7 +13,8 @@ import {
   Wallet,
   Building2,
   PieChart as PieIcon,
-  BarChart2
+  BarChart2,
+  Clock
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -32,6 +33,7 @@ import { ProductItem } from '../types';
 import { generateCashFlowForecast, CashFlowSettings } from '../utils/cashFlowEngine';
 import { formatCurrencyBRL, formatPercent } from '../utils/pricingCalculator';
 import { exportCashFlowToCSV } from '../utils/exportUtils';
+import { formatTermDisplay } from '../utils/paymentTerms';
 
 interface CashFlowDashboardProps {
   products: ProductItem[];
@@ -241,6 +243,127 @@ export const CashFlowDashboard: React.FC<CashFlowDashboardProps> = ({ products }
             )}
           </div>
         </div>
+      </div>
+
+      {/* Prazos Médios Ponderados (PMR / PMP) & Ciclo Financeiro Operacional */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-md">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pb-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-500/20 text-indigo-300 rounded-xl border border-indigo-400/30">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                Prazos Médios Ponderados & Ciclo Financeiro da Carteira
+              </h3>
+              <p className="text-xs text-slate-300">
+                Calculado a partir dos prazos parcelados (30d, 30/60d, 30/60/90d, etc.) configurados em cada produto.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="px-3.5 py-1.5 rounded-xl bg-white/10 border border-white/15 text-xs font-semibold">
+              <span className="text-slate-400 mr-1.5">Fórmula:</span>
+              <span className="font-mono text-emerald-300">PMR ({summary.averageReceivableDays}d)</span>
+              <span className="text-slate-400 mx-1">-</span>
+              <span className="font-mono text-blue-300">PMP ({summary.averagePayableDays}d)</span>
+              <span className="text-slate-400 mx-1">=</span>
+              <span className="font-mono font-bold text-amber-300">{summary.financialCycleDays} dias</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4">
+          {/* Card PMR */}
+          <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">
+                Prazo Médio de Recebimento (PMR)
+              </span>
+              <div className="mt-1 text-2xl font-black font-mono text-white">
+                {summary.averageReceivableDays} <span className="text-xs font-sans text-slate-400 font-normal">dias médios</span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-1">
+                Tempo que seus clientes levam para pagar
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+              PMR
+            </div>
+          </div>
+
+          {/* Card PMP */}
+          <div className="bg-white/5 p-4 rounded-2xl border border-white/10 flex items-center justify-between">
+            <div>
+              <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider block">
+                Prazo Médio de Pagamento (PMP)
+              </span>
+              <div className="mt-1 text-2xl font-black font-mono text-white">
+                {summary.averagePayableDays} <span className="text-xs font-sans text-slate-400 font-normal">dias médios</span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-1">
+                Prazo concedido por fornecedores de insumos
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+              PMP
+            </div>
+          </div>
+
+          {/* Card Ciclo Financeiro */}
+          <div className={`p-4 rounded-2xl border flex items-center justify-between ${
+            summary.financialCycleDays > 30
+              ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+              : summary.financialCycleDays <= 0
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
+              : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-200'
+          }`}>
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider block">
+                Ciclo Financeiro Operacional
+              </span>
+              <div className="mt-1 text-2xl font-black font-mono text-white">
+                {summary.financialCycleDays > 0 ? `+${summary.financialCycleDays}` : summary.financialCycleDays} <span className="text-xs font-sans text-slate-400 font-normal">dias de defasagem</span>
+              </div>
+              <p className="text-[11px] text-slate-300 mt-1">
+                {summary.financialCycleDays > 0 
+                  ? 'Necessita de capital para financiar a defasagem'
+                  : 'Operação autofinanciada pelos fornecedores'}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold">
+              CF
+            </div>
+          </div>
+        </div>
+
+        {/* Per-product breakdown pills */}
+        {products.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-white/10 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-slate-400 font-medium mr-1">Prazos por Produto:</span>
+            {products.map((p) => {
+              const recLabel = formatTermDisplay(
+                p.receivableTermsType || (p.receivableDays ? `${p.receivableDays}d` : '30d'),
+                p.receivableInstallments,
+                p.receivableDays
+              );
+              const payLabel = formatTermDisplay(
+                p.payableTermsType || (p.payableDays ? `${p.payableDays}d` : '15d'),
+                p.payableInstallments,
+                p.payableDays
+              );
+              return (
+                <div key={p.id} className="bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 text-[11px] flex items-center gap-2">
+                  <span className="font-semibold text-white truncate max-w-[120px]">{p.name}</span>
+                  <span className="text-emerald-300 font-mono text-[10px]">Rec: {recLabel}</span>
+                  <span className="text-slate-400">|</span>
+                  <span className="text-blue-300 font-mono text-[10px]">Pag: {payLabel}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Main Chart Section */}

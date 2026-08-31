@@ -1,5 +1,6 @@
 import { ProductItem, CashFlowMonthForecast } from '../types';
 import { calculateProductPricing } from './pricingCalculator';
+import { calculateAverageDays, getInstallmentsForPreset } from './paymentTerms';
 
 export interface CashFlowSettings {
   projectionMonths: number; // typically 6 or 12
@@ -21,6 +22,9 @@ export function generateCashFlowForecast(
     minimumCashBalance: number;
     finalCashBalance: number;
     workingCapitalNeed: number; // Necessidade de Capital de Giro
+    averageReceivableDays: number; // Prazo Médio de Recebimento Ponderado (PMR)
+    averagePayableDays: number; // Prazo Médio de Pagamento Ponderado (PMP)
+    financialCycleDays: number; // Ciclo Financeiro (PMR - PMP)
   };
 } {
   const monthsCount = Math.max(3, Math.min(24, settings.projectionMonths || 6));
@@ -32,7 +36,34 @@ export function generateCashFlowForecast(
   const currentDate = new Date();
   const currentMonthIdx = currentDate.getMonth();
 
-  // Pre-calculate per-product monthly base numbers
+  // Helper to get normalized installments array for receivables/payables
+  const getProductInstallments = (
+    installments?: number[],
+    termsType?: string,
+    customStr?: string,
+    fallbackDays: number = 30
+  ): number[] => {
+    if (installments && installments.length > 0) {
+      return installments;
+    }
+    if (termsType) {
+      return getInstallmentsForPreset(termsType, customStr);
+    }
+    if (fallbackDays === 0) return [0];
+    if (fallbackDays === 15) return [15];
+    if (fallbackDays === 30) return [30];
+    if (fallbackDays === 45) return [30, 60];
+    if (fallbackDays === 60) return [30, 60, 90];
+    if (fallbackDays === 75) return [30, 60, 90, 120];
+    return [fallbackDays];
+  };
+
+  let totalWeightedRevenue = 0;
+  let totalWeightedReceivableDays = 0;
+  let totalWeightedRawCost = 0;
+  let totalWeightedPayableDays = 0;
+
+  // Pre-calculate per-product monthly base numbers and installment splits
   const productMetrics = products.map((product) => {
     const calc = calculateProductPricing(product);
     const baseVolume = product.targetSalesVolume || 0;
@@ -43,6 +74,29 @@ export function generateCashFlowForecast(
     const monthlyFixedCost = baseVolume * calc.totalFixedExpensesUnit;
     const monthlyTaxes = baseVolume * calc.taxesAmount;
     const monthlyVariables = baseVolume * calc.variableExpensesAmount;
+
+    const recInstallments = getProductInstallments(
+      product.receivableInstallments,
+      product.receivableTermsType,
+      product.receivableTermsCustom,
+      product.receivableDays ?? 30
+    );
+
+    const payInstallments = getProductInstallments(
+      product.payableInstallments,
+      product.payableTermsType,
+      product.payableTermsCustom,
+      product.payableDays ?? 15
+    );
+
+    const effectivePmr = product.receivableDays ?? calculateAverageDays(recInstallments);
+    const effectivePmp = product.payableDays ?? calculateAverageDays(payInstallments);
+
+    totalWeightedRevenue += monthlyGrossInvoiced;
+    totalWeightedReceivableDays += monthlyGrossInvoiced * effectivePmr;
+
+    totalWeightedRawCost += monthlyRawCost;
+    totalWeightedPayableDays += monthlyRawCost * effectivePmp;
 
     return {
       product,
@@ -55,10 +109,22 @@ export function generateCashFlowForecast(
       monthlyFixedCost,
       monthlyTaxes,
       monthlyVariables,
-      receivableLagMonths: (product.receivableDays || settings.defaultReceivableLagDays || 30) > 20 ? 1 : 0,
-      payableLagMonths: (product.payableDays || 15) > 20 ? 1 : 0,
+      recInstallments,
+      payInstallments,
+      effectivePmr,
+      effectivePmp,
     };
   });
+
+  const averageReceivableDays = totalWeightedRevenue > 0
+    ? Math.round((totalWeightedReceivableDays / totalWeightedRevenue) * 10) / 10
+    : 30;
+
+  const averagePayableDays = totalWeightedRawCost > 0
+    ? Math.round((totalWeightedPayableDays / totalWeightedRawCost) * 10) / 10
+    : 15;
+
+  const financialCycleDays = Math.round((averageReceivableDays - averagePayableDays) * 10) / 10;
 
   const monthlyData: CashFlowMonthForecast[] = [];
   let currentCumulativeBalance = settings.initialCashBalance || 0;
@@ -68,20 +134,34 @@ export function generateCashFlowForecast(
   let grandTotalInflow = 0;
   let grandTotalOutflow = 0;
 
-  // Track delayed receivables and payables across timeline
-  const scheduledInflows: number[] = new Array(monthsCount + 2).fill(0);
-  const scheduledTaxOutflows: number[] = new Array(monthsCount + 2).fill(0);
-  const scheduledSupplierOutflows: number[] = new Array(monthsCount + 2).fill(0);
+  // Track delayed receivables and payables across timeline (allocating safe buffer of +12 months)
+  const maxHorizon = monthsCount + 12;
+  const scheduledInflows: number[] = new Array(maxHorizon).fill(0);
+  const scheduledTaxOutflows: number[] = new Array(maxHorizon).fill(0);
+  const scheduledSupplierOutflows: number[] = new Array(maxHorizon).fill(0);
 
-  // Initialize month 0 with realistic ongoing baseline if needed
+  // Initialize month 0 baseline for ongoing rolling contracts (past months maturing now)
   productMetrics.forEach((m) => {
-    if (m.receivableLagMonths > 0) {
-      scheduledInflows[0] += m.monthlyGrossInvoiced * 0.85; // Previous month sales maturing
-    }
-    if (m.payableLagMonths > 0) {
-      scheduledSupplierOutflows[0] += m.monthlyRawCost * 0.85;
-    }
-    scheduledTaxOutflows[0] += m.monthlyTaxes * 0.85; // Last month taxes due on 20th
+    // Mature prior receivables
+    m.recInstallments.forEach((days) => {
+      const portion = (m.monthlyGrossInvoiced / m.recInstallments.length) * 0.9;
+      const monthLag = Math.round(days / 30);
+      if (monthLag > 0) {
+        scheduledInflows[0] += portion;
+      }
+    });
+
+    // Mature prior supplier payments
+    m.payInstallments.forEach((days) => {
+      const portion = (m.monthlyRawCost / m.payInstallments.length) * 0.9;
+      const monthLag = Math.round(days / 30);
+      if (monthLag > 0) {
+        scheduledSupplierOutflows[0] += portion;
+      }
+    });
+
+    // Taxes from previous month
+    scheduledTaxOutflows[0] += m.monthlyTaxes * 0.85;
   });
 
   for (let i = 0; i < monthsCount; i++) {
@@ -114,25 +194,30 @@ export function generateCashFlowForecast(
       monthFixed += scaledFixed;
       monthVariables += scaledVariables;
 
-      // Inflow schedule based on receivable terms
-      if (m.receivableLagMonths === 0) {
-        scheduledInflows[i] += scaledInvoiced;
-      } else {
-        // 30% cash/pix, 70% next month (credit/prazo)
-        scheduledInflows[i] += scaledInvoiced * 0.3;
-        scheduledInflows[i + 1] += scaledInvoiced * 0.7;
-      }
+      // Inflow schedule distributed across exact installment terms (30, 60, 90, 120 days etc)
+      const recPartAmount = scaledInvoiced / Math.max(1, m.recInstallments.length);
+      m.recInstallments.forEach((days) => {
+        const monthLag = Math.max(0, Math.round(days / 30));
+        const targetIndex = i + monthLag;
+        if (targetIndex < maxHorizon) {
+          scheduledInflows[targetIndex] += recPartAmount;
+        }
+      });
 
-      // Supplier payment schedule
-      if (m.payableLagMonths === 0) {
-        scheduledSupplierOutflows[i] += scaledRaw;
-      } else {
-        scheduledSupplierOutflows[i] += scaledRaw * 0.4;
-        scheduledSupplierOutflows[i + 1] += scaledRaw * 0.6;
-      }
+      // Supplier payment schedule distributed across exact installment terms
+      const payPartAmount = scaledRaw / Math.max(1, m.payInstallments.length);
+      m.payInstallments.forEach((days) => {
+        const monthLag = Math.max(0, Math.round(days / 30));
+        const targetIndex = i + monthLag;
+        if (targetIndex < maxHorizon) {
+          scheduledSupplierOutflows[targetIndex] += payPartAmount;
+        }
+      });
 
       // Taxes are collected on the 20th of the following month (standard DAS/ICMS/PIS/COFINS)
-      scheduledTaxOutflows[i + 1] += scaledTaxes;
+      if (i + 1 < maxHorizon) {
+        scheduledTaxOutflows[i + 1] += scaledTaxes;
+      }
     });
 
     const cashInflowReceived = Number(scheduledInflows[i].toFixed(2));
@@ -191,6 +276,9 @@ export function generateCashFlowForecast(
       minimumCashBalance: Number(minCumulativeBalance.toFixed(2)),
       finalCashBalance: Number(currentCumulativeBalance.toFixed(2)),
       workingCapitalNeed: Number(workingCapitalNeed.toFixed(2)),
+      averageReceivableDays,
+      averagePayableDays,
+      financialCycleDays,
     },
   };
 }

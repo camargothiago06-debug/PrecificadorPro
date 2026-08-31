@@ -35,6 +35,12 @@ import {
   formatCurrencyBRL, 
   formatPercent 
 } from '../utils/pricingCalculator';
+import {
+  STANDARD_PAYMENT_TERMS,
+  calculateAverageDays,
+  parseCustomTermsString,
+  getInstallmentsForPreset,
+} from '../utils/paymentTerms';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -60,8 +66,108 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [category, setCategory] = useState(initialProduct?.category || 'Manufatura / Produção');
   const [description, setDescription] = useState(initialProduct?.description || '');
   const [targetSalesVolume, setTargetSalesVolume] = useState<number>(initialProduct?.targetSalesVolume || 100);
-  const [receivableDays, setReceivableDays] = useState<number>(initialProduct?.receivableDays ?? 30);
-  const [payableDays, setPayableDays] = useState<number>(initialProduct?.payableDays ?? 15);
+
+  // Payment & Receipt Terms state with multi-term calculation
+  const [receivableTermsType, setReceivableTermsType] = useState<string>(() => {
+    if (initialProduct?.receivableTermsType) return initialProduct.receivableTermsType;
+    const d = initialProduct?.receivableDays ?? 30;
+    if (d === 0) return 'a_vista';
+    if (d === 15) return '15d';
+    if (d === 30) return '30d';
+    if (d === 45) return '30_60';
+    if (d === 60) return '30_60_90';
+    if (d === 75) return '30_60_90_120';
+    return '30d';
+  });
+  const [receivableTermsCustom, setReceivableTermsCustom] = useState<string>(initialProduct?.receivableTermsCustom || '');
+  const [receivableInstallments, setReceivableInstallments] = useState<number[]>(() => {
+    if (initialProduct?.receivableInstallments && initialProduct.receivableInstallments.length > 0) {
+      return initialProduct.receivableInstallments;
+    }
+    const d = initialProduct?.receivableDays ?? 30;
+    if (d === 0) return [0];
+    if (d === 15) return [15];
+    if (d === 30) return [30];
+    if (d === 45) return [30, 60];
+    if (d === 60) return [30, 60, 90];
+    if (d === 75) return [30, 60, 90, 120];
+    return [d];
+  });
+  const [receivableDays, setReceivableDays] = useState<number>(() => {
+    if (initialProduct?.receivableDays !== undefined) return initialProduct.receivableDays;
+    return 30;
+  });
+
+  const [payableTermsType, setPayableTermsType] = useState<string>(() => {
+    if (initialProduct?.payableTermsType) return initialProduct.payableTermsType;
+    const d = initialProduct?.payableDays ?? 15;
+    if (d === 0) return 'a_vista';
+    if (d === 15) return '15d';
+    if (d === 30) return '30d';
+    if (d === 45) return '30_60';
+    if (d === 60) return '30_60_90';
+    if (d === 75) return '30_60_90_120';
+    return '15d';
+  });
+  const [payableTermsCustom, setPayableTermsCustom] = useState<string>(initialProduct?.payableTermsCustom || '');
+  const [payableInstallments, setPayableInstallments] = useState<number[]>(() => {
+    if (initialProduct?.payableInstallments && initialProduct.payableInstallments.length > 0) {
+      return initialProduct.payableInstallments;
+    }
+    const d = initialProduct?.payableDays ?? 15;
+    if (d === 0) return [0];
+    if (d === 15) return [15];
+    if (d === 30) return [30];
+    if (d === 45) return [30, 60];
+    if (d === 60) return [30, 60, 90];
+    if (d === 75) return [30, 60, 90, 120];
+    return [d];
+  });
+  const [payableDays, setPayableDays] = useState<number>(() => {
+    if (initialProduct?.payableDays !== undefined) return initialProduct.payableDays;
+    return 15;
+  });
+
+  // Terms handlers
+  const handleSelectReceivableTerms = (typeId: string) => {
+    setReceivableTermsType(typeId);
+    if (typeId === 'custom') {
+      const inst = parseCustomTermsString(receivableTermsCustom || '30/60/90');
+      setReceivableInstallments(inst);
+      setReceivableDays(calculateAverageDays(inst));
+    } else {
+      const inst = getInstallmentsForPreset(typeId);
+      setReceivableInstallments(inst);
+      setReceivableDays(calculateAverageDays(inst));
+    }
+  };
+
+  const handleCustomReceivableInput = (text: string) => {
+    setReceivableTermsCustom(text);
+    const inst = parseCustomTermsString(text);
+    setReceivableInstallments(inst);
+    setReceivableDays(calculateAverageDays(inst));
+  };
+
+  const handleSelectPayableTerms = (typeId: string) => {
+    setPayableTermsType(typeId);
+    if (typeId === 'custom') {
+      const inst = parseCustomTermsString(payableTermsCustom || '15/30/45');
+      setPayableInstallments(inst);
+      setPayableDays(calculateAverageDays(inst));
+    } else {
+      const inst = getInstallmentsForPreset(typeId);
+      setPayableInstallments(inst);
+      setPayableDays(calculateAverageDays(inst));
+    }
+  };
+
+  const handleCustomPayableInput = (text: string) => {
+    setPayableTermsCustom(text);
+    const inst = parseCustomTermsString(text);
+    setPayableInstallments(inst);
+    setPayableDays(calculateAverageDays(inst));
+  };
 
   // Direct Costs
   const [directCosts, setDirectCosts] = useState<DirectCostItem[]>(
@@ -146,7 +252,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     pricingMethod,
     manualSalePrice,
     receivableDays: Number(receivableDays) || 0,
+    receivableTermsType,
+    receivableTermsCustom,
+    receivableInstallments,
     payableDays: Number(payableDays) || 0,
+    payableTermsType,
+    payableTermsCustom,
+    payableInstallments,
     createdAt: initialProduct?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -458,41 +570,177 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     />
                   </div>
 
-                  {/* Cash Flow Payment Terms */}
-                  <div className="p-3.5 bg-indigo-50/60 rounded-xl border border-indigo-100">
-                    <h4 className="text-xs font-bold text-indigo-950 mb-1 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-indigo-600" />
-                      Prazos Médios para o Fluxo de Caixa Previsto
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                          Prazo Médio de Recebimento das Vendas
-                        </label>
-                        <select
-                          value={receivableDays}
-                          onChange={(e) => setReceivableDays(parseInt(e.target.value))}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-indigo-200 rounded-lg text-slate-800"
-                        >
-                          <option value={0}>À vista / PIX no ato (0 dias)</option>
-                          <option value={14}>Cartão / Marketplace (14 dias)</option>
-                          <option value={30}>Boleto / Prazo 30 dias</option>
-                          <option value={60}>Parcelado / Prazo 60 dias</option>
-                        </select>
+                  {/* Cash Flow Payment & Receipt Terms with Dynamic Average Calculation */}
+                  <div className="p-4 bg-gradient-to-br from-indigo-50/80 to-slate-50 rounded-2xl border border-indigo-100/90 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 bg-indigo-600 text-white rounded-lg shadow-xs">
+                          <Clock className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                            Prazos de Recebimento & Pagamento (Fluxo de Caixa)
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            Configure os prazos parcelados. O sistema calcula a média ponderada automaticamente.
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                          Prazo Médio de Pagamento aos Fornecedores
-                        </label>
-                        <select
-                          value={payableDays}
-                          onChange={(e) => setPayableDays(parseInt(e.target.value))}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-indigo-200 rounded-lg text-slate-800"
-                        >
-                          <option value={0}>À vista na compra (0 dias)</option>
-                          <option value={15}>Boleto quinzenal (15 dias)</option>
-                          <option value={30}>Faturado 30 dias</option>
-                        </select>
+
+                      {/* Ciclo Financeiro Badge */}
+                      <div className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${
+                        (receivableDays - payableDays) > 30 
+                          ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : (receivableDays - payableDays) <= 0
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                      }`}>
+                        <span className="text-[10px] text-slate-500 font-normal">Ciclo Financeiro:</span>
+                        <span>{receivableDays - payableDays > 0 ? `+${receivableDays - payableDays}` : receivableDays - payableDays} dias</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {/* 1. PRAZO DE RECEBIMENTO (PMR) */}
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            Prazo de Recebimento das Vendas (PMR)
+                          </label>
+                          <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            Média: {receivableDays} dias
+                          </span>
+                        </div>
+
+                        {/* Presets Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {STANDARD_PAYMENT_TERMS.map((term) => {
+                            const isSelected = receivableTermsType === term.id;
+                            return (
+                              <button
+                                key={term.id}
+                                type="button"
+                                onClick={() => handleSelectReceivableTerms(term.id)}
+                                className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold text-left transition-all border ${
+                                  isSelected
+                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                                }`}
+                              >
+                                <div className="leading-tight truncate">{term.label}</div>
+                                <div className={`text-[9px] ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                                  {term.id === 'custom' ? 'Digitar prazos' : `Média: ${term.averageDays}d`}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Custom Input if 'custom' is selected */}
+                        {receivableTermsType === 'custom' && (
+                          <div className="pt-1">
+                            <label className="block text-[10px] font-semibold text-slate-600 mb-1">
+                              Digite os prazos separados por barra (ex: 15/30/45 ou 28/56):
+                            </label>
+                            <input
+                              type="text"
+                              value={receivableTermsCustom}
+                              onChange={(e) => handleCustomReceivableInput(e.target.value)}
+                              placeholder="ex: 30/60/90 ou 14/28/42"
+                              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono"
+                            />
+                          </div>
+                        )}
+
+                        {/* Installment tags and calculation breakdown */}
+                        <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-[11px] space-y-1">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[10px] text-slate-500 font-medium">Parcelas:</span>
+                            {receivableInstallments.map((days, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold"
+                              >
+                                {idx + 1}ª: {days}d ({Math.round(100 / receivableInstallments.length)}%)
+                              </span>
+                            ))}
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            <strong>Fórmula da Média:</strong> ({receivableInstallments.join(' + ')} dias) ÷ {receivableInstallments.length} = <span className="font-bold text-emerald-700">{receivableDays} dias</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. PRAZO DE PAGAMENTO (PMP) */}
+                      <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-2xs space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                            Prazo de Pagamento a Fornecedores (PMP)
+                          </label>
+                          <span className="text-xs font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                            Média: {payableDays} dias
+                          </span>
+                        </div>
+
+                        {/* Presets Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {STANDARD_PAYMENT_TERMS.map((term) => {
+                            const isSelected = payableTermsType === term.id;
+                            return (
+                              <button
+                                key={term.id}
+                                type="button"
+                                onClick={() => handleSelectPayableTerms(term.id)}
+                                className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold text-left transition-all border ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                                }`}
+                              >
+                                <div className="leading-tight truncate">{term.label}</div>
+                                <div className={`text-[9px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                  {term.id === 'custom' ? 'Digitar prazos' : `Média: ${term.averageDays}d`}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Custom Input if 'custom' is selected */}
+                        {payableTermsType === 'custom' && (
+                          <div className="pt-1">
+                            <label className="block text-[10px] font-semibold text-slate-600 mb-1">
+                              Digite os prazos separados por barra (ex: 15/30/45 ou 30/60):
+                            </label>
+                            <input
+                              type="text"
+                              value={payableTermsCustom}
+                              onChange={(e) => handleCustomPayableInput(e.target.value)}
+                              placeholder="ex: 15/30/45 ou 30/60"
+                              className="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-300 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-mono"
+                            />
+                          </div>
+                        )}
+
+                        {/* Installment tags and calculation breakdown */}
+                        <div className="p-2 bg-slate-50 rounded-lg border border-slate-200 text-[11px] space-y-1">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[10px] text-slate-500 font-medium">Parcelas:</span>
+                            {payableInstallments.map((days, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-mono font-bold"
+                              >
+                                {idx + 1}ª: {days}d ({Math.round(100 / payableInstallments.length)}%)
+                              </span>
+                            ))}
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            <strong>Fórmula da Média:</strong> ({payableInstallments.join(' + ')} dias) ÷ {payableInstallments.length} = <span className="font-bold text-blue-700">{payableDays} dias</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

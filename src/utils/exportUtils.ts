@@ -34,6 +34,8 @@ export function exportProductsToCSV(products: ProductItem[]) {
     'Ponto de Equilíbrio (R$)',
     'Faturamento Mensal Estimado (R$)',
     'Lucro Líquido Mensal Estimado (R$)',
+    'Prazo Médio Recebimento PMR (dias)',
+    'Prazo Médio Pagamento PMP (dias)',
   ];
 
   const rows = products.map((product) => {
@@ -73,6 +75,8 @@ export function exportProductsToCSV(products: ProductItem[]) {
       calc.breakEvenRevenue.toFixed(2),
       monthlyRev.toFixed(2),
       monthlyProfit.toFixed(2),
+      product.receivableDays ?? 30,
+      product.payableDays ?? 15,
     ].join(';');
   });
 
