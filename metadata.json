@@ -1,0 +1,6 @@
+{
+  "name": "Precificador Pro - Formação de Preço & Fluxo de Caixa",
+  "description": "Calculadora profissional de formação de preço de venda com impostos, GGF, custos fixos e variáveis, margem de lucro, relatórios financeiros e fluxo de caixa previsto.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
