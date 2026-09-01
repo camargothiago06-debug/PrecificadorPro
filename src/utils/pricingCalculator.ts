@@ -442,3 +442,9 @@ export function formatKg(value: number, decimals: number = 2): string {
   return `${value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} kg`;
 }
 
+export function formatCurrencyPerKg(value: number): string {
+  if (isNaN(value) || value === null || value === undefined) return 'R$ 0,00/kg';
+  return `${formatCurrencyBRL(value)}/kg`;
+}
+
+

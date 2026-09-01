@@ -1,46 +1,46 @@
 import { ProductItem, AppSettings } from '../types';
 
 export const initialAppSettings: AppSettings = {
-  companyName: 'Minha Empresa & Indústria',
+  companyName: 'Indústria & Processamento Brasil',
   defaultTaxRegime: 'lucro_real',
   defaultSimplesRate: 6.5,
-  defaultCardRate: 3.0,
-  defaultCommissionRate: 5.0,
-  defaultMonthlyFixedOverhead: 5500,
-  defaultMonthlyGlobalVolume: 400,
+  defaultCardRate: 2.5,
+  defaultCommissionRate: 4.0,
+  defaultMonthlyFixedOverhead: 18500,
+  defaultMonthlyGlobalVolume: 12000, // 12.000 kg/mês
   currency: 'BRL',
 };
 
 export const defaultProducts: ProductItem[] = [
   {
     id: 'prod-1',
-    code: 'IND-001',
-    name: 'Bolsa Executiva de Couro Legítimo',
-    category: 'Manufatura & Indústria',
-    description: 'Bolsa estruturada em couro legítimo bovino com forro acetinado e metais dourados.',
-    netWeightKg: 1.25, // 1.25 kg por unidade
-    unitOfMeasure: 'un',
-    targetSalesVolume: 80,
-    factoryMonthlyKgCapacity: 600, // 600 kg/mês capacidade da fábrica
+    code: 'IND-PP-01',
+    name: 'Composto Termoplástico PP Industrial 20% Fibra',
+    category: 'Polímeros & Resinas',
+    description: 'Polímero estrutural de alta resistência mecânica para injeção de autopeças e utilidades técnicas.',
+    netWeightKg: 1.0, // 1 kg como unidade padrão
+    unitOfMeasure: 'kg',
+    targetSalesVolume: 4500, // 4.500 kg/mês
+    factoryMonthlyKgCapacity: 15000, // Capacidade do parque fabril: 15.000 kg/mês
     directCosts: [
-      { id: 'dc-1', name: 'Couro Bovino Premium (m²)', category: 'raw_material', unit: 'm²', quantity: 0.85, unitCost: 85.00, totalCost: 72.25, hasTaxCredit: true },
-      { id: 'dc-2', name: 'Forro Jacquard / Cetim', category: 'raw_material', unit: 'm', quantity: 0.90, unitCost: 18.00, totalCost: 16.20, hasTaxCredit: true },
-      { id: 'dc-3', name: 'Metais (Zíper, Mosquetão, Rebites)', category: 'raw_material', unit: 'kit', quantity: 1, unitCost: 19.50, totalCost: 19.50, hasTaxCredit: true },
-      { id: 'dc-4', name: 'Caixa Rígida & Saco TNT Protetor', category: 'packaging', unit: 'un', quantity: 1, unitCost: 12.00, totalCost: 12.00, hasTaxCredit: true },
-      { id: 'dc-5', name: 'Mão de Obra Direta (Corte e Costura 2.5h)', category: 'direct_labor', unit: 'horas', quantity: 2.5, unitCost: 24.00, totalCost: 60.00 },
+      { id: 'dc-1', name: 'Resina Polipropileno Virgem Base', category: 'raw_material', unit: 'kg', quantity: 0.78, unitCost: 8.90, totalCost: 6.942, hasTaxCredit: true },
+      { id: 'dc-2', name: 'Fibra de Vidro Moída Especial', category: 'raw_material', unit: 'kg', quantity: 0.20, unitCost: 14.50, totalCost: 2.90, hasTaxCredit: true },
+      { id: 'dc-3', name: 'Aditivos Antioxidantes & Pigmento Preto', category: 'raw_material', unit: 'kg', quantity: 0.02, unitCost: 32.00, totalCost: 0.64, hasTaxCredit: true },
+      { id: 'dc-4', name: 'Saco Valvulado de Ráfia Industrial 25kg (pró-rata)', category: 'packaging', unit: 'kg', quantity: 1, unitCost: 0.18, totalCost: 0.18, hasTaxCredit: true },
+      { id: 'dc-5', name: 'Mão de Obra Direta Operação Extrusora', category: 'direct_labor', unit: 'kg', quantity: 1, unitCost: 0.95, totalCost: 0.95 },
     ],
     ggfItems: [
-      { id: 'ggf-1', name: 'Energia Elétrica das Máquinas de Costura', category: 'energy', allocationType: 'rate_per_kg', value: 3600, calculatedUnitCost: 7.50, hasTaxCredit: true },
-      { id: 'ggf-2', name: 'Aluguel do Ateliê/Galpão Rateado por kg', category: 'rent', allocationType: 'rate_per_kg', value: 7200, calculatedUnitCost: 15.00 },
-      { id: 'ggf-3', name: 'Depreciação & Manutenção Maquinário', category: 'depreciation', allocationType: 'fixed_per_kg', value: 3.60, calculatedUnitCost: 4.50 },
-      { id: 'ggf-4', name: 'Supervisão de Produção e Qualidade', category: 'supervision', allocationType: 'fixed_per_kg', value: 2.88, calculatedUnitCost: 3.60 },
+      { id: 'ggf-1', name: 'Energia Elétrica Industrial das Extrusoras', category: 'energy', allocationType: 'rate_per_kg', value: 12000, calculatedUnitCost: 0.80, calculatedCostPerKg: 0.80, hasTaxCredit: true },
+      { id: 'ggf-2', name: 'Aluguel do Galpão Industrial Rateado por kg', category: 'rent', allocationType: 'rate_per_kg', value: 9000, calculatedUnitCost: 0.60, calculatedCostPerKg: 0.60 },
+      { id: 'ggf-3', name: 'Depreciação & Manutenção Preventiva do Maquinário', category: 'depreciation', allocationType: 'fixed_per_kg', value: 0.75, calculatedUnitCost: 0.75, calculatedCostPerKg: 0.75 },
+      { id: 'ggf-4', name: 'Controle de Qualidade e Laboratório', category: 'supervision', allocationType: 'fixed_per_kg', value: 0.45, calculatedUnitCost: 0.45, calculatedCostPerKg: 0.45 },
     ],
     fixedExpenseAllocation: {
-      monthlyFixedExpenses: 4500,
-      estimatedMonthlyKgVolume: 375, // 300 un x 1.25 kg = 375 kg
-      estimatedMonthlyVolume: 300,
-      costPerKg: 12.00,
-      costPerUnit: 15.00,
+      monthlyFixedExpenses: 18000,
+      estimatedMonthlyKgVolume: 15000, // 15.000 kg/mês
+      estimatedMonthlyVolume: 15000,
+      costPerKg: 1.20,
+      costPerUnit: 1.20,
       allocationBasis: 'kg',
     },
     taxSettings: {
@@ -49,32 +49,32 @@ export const defaultProducts: ProductItem[] = [
       icms: 18.0, // ICMS Venda 18%
       pis: 1.65, // PIS Não-Cumulativo 1.65%
       cofins: 7.60, // COFINS Não-Cumulativo 7.60%
-      ipi: 5.0, // IPI Indústria 5%
+      ipi: 5.0, // IPI 5%
       iss: 0,
       irpjCsll: 0,
-      takeRawMaterialTaxCredits: true, // Aproveitamento de Créditos Fiscais na Entrada
+      takeRawMaterialTaxCredits: true, // Créditos na entrada
       pisCreditRate: 1.65,
       cofinsCreditRate: 7.60,
       icmsCreditRate: 12.0, // Crédito médio ICMS insumos
       ipiCreditRate: 5.0,
-      totalIrpjCsllRealRate: 34.0, // 34% (15%+10% IRPJ + 9% CSLL sobre Lucro Real)
+      totalIrpjCsllRealRate: 34.0, // 34% sobre LAIR
       customTaxRate: 0,
-      totalTaxRate: 32.25, // 18% + 1.65% + 7.60% + 5%
+      totalTaxRate: 32.25, // 18 + 1.65 + 7.6 + 5
     },
     variableExpenses: {
-      salesCommissionRate: 4.0,
-      cardGatewayRate: 2.8,
+      salesCommissionRate: 3.5,
+      cardGatewayRate: 0,
       marketplacePlatformRate: 0,
-      shippingUnitCost: 0,
+      shippingUnitCost: 0.60, // Frete rodoviário R$ 0,60/kg
       otherVariableRate: 1.0,
-      totalVariableRate: 7.8,
+      totalVariableRate: 4.5,
     },
-    desiredProfitMargin: 20.0, // 20% de margem líquida real final
+    desiredProfitMargin: 16.0, // 16% líquido por kg
     pricingMethod: 'markup_divisor',
-    receivableDays: 60, // Média de 30/60/90 = 60 dias
+    receivableDays: 60, // 30/60/90
     receivableTermsType: '30_60_90',
     receivableInstallments: [30, 60, 90],
-    payableDays: 45, // Média de 30/60 = 45 dias
+    payableDays: 45, // 30/60
     payableTermsType: '30_60',
     payableInstallments: [30, 60],
     createdAt: new Date().toISOString(),
@@ -82,38 +82,39 @@ export const defaultProducts: ProductItem[] = [
   },
   {
     id: 'prod-2',
-    code: 'IND-002',
-    name: 'Linha de Panificação & Tortas Gourmet 1.5kg',
+    code: 'ALIM-MIX-02',
+    name: 'Pré-Mistura Industrial para Panificação Premium',
     category: 'Indústria Alimentícia',
-    description: 'Produto alimentício de fabricação industrial com insumos primários e cadeia fria.',
-    netWeightKg: 1.50, // 1.5 kg por unidade
+    description: 'Composto balanceado de farinhas enriquecidas, enzimas ativas e emulsificantes para panificação industrial.',
+    netWeightKg: 1.0,
     unitOfMeasure: 'kg',
-    targetSalesVolume: 180,
-    factoryMonthlyKgCapacity: 1200, // 1200 kg/mês capacidade total
+    targetSalesVolume: 8000, // 8.000 kg/mês
+    factoryMonthlyKgCapacity: 25000, // Capacidade: 25.000 kg/mês
     directCosts: [
-      { id: 'dc-201', name: 'Laticínios & Insumos Base', category: 'raw_material', unit: 'kit', quantity: 1, unitCost: 22.80, totalCost: 22.80, hasTaxCredit: true },
-      { id: 'dc-202', name: 'Ingredientes Nobres & Chocolates', category: 'raw_material', unit: 'g', quantity: 300, unitCost: 0.06, totalCost: 18.00, hasTaxCredit: true },
-      { id: 'dc-203', name: 'Farinha, Ovos e Fermentos Especiais', category: 'raw_material', unit: 'receita', quantity: 1, unitCost: 10.50, totalCost: 10.50, hasTaxCredit: true },
-      { id: 'dc-204', name: 'Embalagem Rígida Termoselada com Barreira', category: 'packaging', unit: 'un', quantity: 1, unitCost: 4.50, totalCost: 4.50, hasTaxCredit: true },
-      { id: 'dc-205', name: 'Mão de Obra de Produção (1h)', category: 'direct_labor', unit: 'horas', quantity: 1.0, unitCost: 22.00, totalCost: 22.00 },
+      { id: 'dc-201', name: 'Farinha de Trigo Especial Tipo 1', category: 'raw_material', unit: 'kg', quantity: 0.82, unitCost: 3.40, totalCost: 2.788, hasTaxCredit: true },
+      { id: 'dc-202', name: 'Complexo Enzimático & Melhoradores de Farinha', category: 'raw_material', unit: 'kg', quantity: 0.05, unitCost: 28.00, totalCost: 1.40, hasTaxCredit: true },
+      { id: 'dc-203', name: 'Emulsificantes & Gordura Vegetal em Pó', category: 'raw_material', unit: 'kg', quantity: 0.08, unitCost: 18.50, totalCost: 1.48, hasTaxCredit: true },
+      { id: 'dc-204', name: 'Açúcares Especiais e Sal Micronizado', category: 'raw_material', unit: 'kg', quantity: 0.05, unitCost: 4.20, totalCost: 0.21, hasTaxCredit: true },
+      { id: 'dc-205', name: 'Embalagem Kraft Multifolhada com Barreira (pró-rata)', category: 'packaging', unit: 'kg', quantity: 1, unitCost: 0.15, totalCost: 0.15, hasTaxCredit: true },
+      { id: 'dc-206', name: 'Mão de Obra de Mistura e Ensaque', category: 'direct_labor', unit: 'kg', quantity: 1, unitCost: 0.42, totalCost: 0.42 },
     ],
     ggfItems: [
-      { id: 'ggf-201', name: 'Gás Industrial & Forno Elétrico Contínuo', category: 'energy', allocationType: 'fixed_per_kg', value: 3.20, calculatedUnitCost: 4.80, hasTaxCredit: true },
-      { id: 'ggf-202', name: 'Água Industrial e Higienização Sanitária', category: 'maintenance', allocationType: 'fixed_per_kg', value: 1.3333, calculatedUnitCost: 2.00 },
-      { id: 'ggf-203', name: 'Depreciação de Câmaras Frias e Misturadores', category: 'depreciation', allocationType: 'rate_per_kg', value: 2000, calculatedUnitCost: 2.50 },
+      { id: 'ggf-201', name: 'Energia Elétrica dos Moinhos e Misturadores', category: 'energy', allocationType: 'fixed_per_kg', value: 0.45, calculatedUnitCost: 0.45, calculatedCostPerKg: 0.45, hasTaxCredit: true },
+      { id: 'ggf-202', name: 'Higienização Sanitária & Laudos Microbiológicos', category: 'maintenance', allocationType: 'fixed_per_kg', value: 0.28, calculatedUnitCost: 0.28, calculatedCostPerKg: 0.28 },
+      { id: 'ggf-203', name: 'Depreciação dos Silos e Linha Automatizada', category: 'depreciation', allocationType: 'rate_per_kg', value: 7500, calculatedUnitCost: 0.30, calculatedCostPerKg: 0.30 },
     ],
     fixedExpenseAllocation: {
-      monthlyFixedExpenses: 3800,
-      estimatedMonthlyKgVolume: 525, // 350 un x 1.5 kg = 525 kg
-      estimatedMonthlyVolume: 350,
-      costPerKg: 7.238,
-      costPerUnit: 10.85,
+      monthlyFixedExpenses: 15000,
+      estimatedMonthlyKgVolume: 25000, // 25.000 kg/mês
+      estimatedMonthlyVolume: 25000,
+      costPerKg: 0.60,
+      costPerUnit: 0.60,
       allocationBasis: 'kg',
     },
     taxSettings: {
       regime: 'lucro_real',
       simplesRate: 0,
-      icms: 12.0, // ICMS cesta / produtos alimentícios
+      icms: 12.0, // ICMS 12%
       pis: 1.65,
       cofins: 7.60,
       ipi: 0, // Isento IPI
@@ -125,22 +126,22 @@ export const defaultProducts: ProductItem[] = [
       icmsCreditRate: 12.0,
       totalIrpjCsllRealRate: 34.0,
       customTaxRate: 0,
-      totalTaxRate: 21.25, // 12% + 1.65% + 7.60%
+      totalTaxRate: 21.25, // 12 + 1.65 + 7.6
     },
     variableExpenses: {
-      salesCommissionRate: 3.0,
-      cardGatewayRate: 2.2,
+      salesCommissionRate: 2.5,
+      cardGatewayRate: 0,
       marketplacePlatformRate: 0,
-      shippingUnitCost: 0,
+      shippingUnitCost: 0.40, // Frete R$ 0,40/kg
       otherVariableRate: 1.0,
-      totalVariableRate: 6.2,
+      totalVariableRate: 3.5,
     },
     desiredProfitMargin: 18.0,
     pricingMethod: 'markup_divisor',
-    receivableDays: 45, // Média de 30/60 = 45 dias
+    receivableDays: 45,
     receivableTermsType: '30_60',
     receivableInstallments: [30, 60],
-    payableDays: 30, // 30 dias
+    payableDays: 30,
     payableTermsType: '30d',
     payableInstallments: [30],
     createdAt: new Date().toISOString(),
@@ -148,29 +149,32 @@ export const defaultProducts: ProductItem[] = [
   },
   {
     id: 'prod-3',
-    code: 'COM-003',
-    name: 'Kit Teclado Mecânico RGB Wireless Switch Red',
-    category: 'Comércio / Distribuição',
-    description: 'Teclado mecânico compacto 75% hot-swappable para produtividade e jogos.',
-    netWeightKg: 0.85, // 0.85 kg por unidade
-    unitOfMeasure: 'un',
-    targetSalesVolume: 120,
-    factoryMonthlyKgCapacity: 500,
+    code: 'QUIM-DET-03',
+    name: 'Detergente Industrial Alcalino Concentrado',
+    category: 'Química & Sanitizantes',
+    description: 'Detergente desengraxante industrial biodegradável para limpeza pesada CIP e superfícies industriais.',
+    netWeightKg: 1.0,
+    unitOfMeasure: 'kg',
+    targetSalesVolume: 3500, // 3.500 kg/mês
+    factoryMonthlyKgCapacity: 10000, // Capacidade: 10.000 kg/mês
     directCosts: [
-      { id: 'dc-301', name: 'Custo de Aquisição com Fornecedor Nacional', category: 'raw_material', unit: 'un', quantity: 1, unitCost: 145.00, totalCost: 145.00, hasTaxCredit: true },
-      { id: 'dc-302', name: 'Caixa de Envio Reforçada + Fita Gomada', category: 'packaging', unit: 'un', quantity: 1, unitCost: 4.80, totalCost: 4.80, hasTaxCredit: true },
-      { id: 'dc-303', name: 'Etiquetagem, Conferência e Teste de Bancada', category: 'direct_labor', unit: 'horas', quantity: 0.25, unitCost: 20.00, totalCost: 5.00 },
+      { id: 'dc-301', name: 'Tensoativos Aniônicos & Não-Iônicos Concentrados', category: 'raw_material', unit: 'kg', quantity: 0.35, unitCost: 16.20, totalCost: 5.67, hasTaxCredit: true },
+      { id: 'dc-302', name: 'Hidróxido de Sódio & Alcalinizantes', category: 'raw_material', unit: 'kg', quantity: 0.20, unitCost: 4.80, totalCost: 0.96, hasTaxCredit: true },
+      { id: 'dc-303', name: 'Sequestrantes, Quelantes & Água Desmineralizada', category: 'raw_material', unit: 'kg', quantity: 0.45, unitCost: 1.10, totalCost: 0.495, hasTaxCredit: true },
+      { id: 'dc-304', name: 'Tambor/Bombona PEAD 50kg Homologada (pró-rata)', category: 'packaging', unit: 'kg', quantity: 1, unitCost: 0.32, totalCost: 0.32, hasTaxCredit: true },
+      { id: 'dc-305', name: 'Mão de Obra de Formulação e Envase', category: 'direct_labor', unit: 'kg', quantity: 1, unitCost: 0.55, totalCost: 0.55 },
     ],
     ggfItems: [
-      { id: 'ggf-301', name: 'Espaço de Armazenagem & Estoque Rateado', category: 'rent', allocationType: 'fixed_per_kg', value: 4.1176, calculatedUnitCost: 3.50 },
-      { id: 'ggf-302', name: 'Sistemas ERP e Impressora Térmica', category: 'depreciation', allocationType: 'fixed_per_kg', value: 2.3529, calculatedUnitCost: 2.00 },
+      { id: 'ggf-301', name: 'Estação de Tratamento de Efluentes (ETE) & Laudos Ambientais', category: 'maintenance', allocationType: 'fixed_per_kg', value: 0.65, calculatedUnitCost: 0.65, calculatedCostPerKg: 0.65 },
+      { id: 'ggf-302', name: 'Energia Elétrica e Agitadores Pneumáticos', category: 'energy', allocationType: 'fixed_per_kg', value: 0.40, calculatedUnitCost: 0.40, calculatedCostPerKg: 0.40, hasTaxCredit: true },
+      { id: 'ggf-303', name: 'Aluguel do Parque Fabril & Armazenagem Quimica', category: 'rent', allocationType: 'rate_per_kg', value: 5000, calculatedUnitCost: 0.50, calculatedCostPerKg: 0.50 },
     ],
     fixedExpenseAllocation: {
-      monthlyFixedExpenses: 4200,
-      estimatedMonthlyKgVolume: 340, // 400 un x 0.85 kg = 340 kg
-      estimatedMonthlyVolume: 400,
-      costPerKg: 12.35,
-      costPerUnit: 10.50,
+      monthlyFixedExpenses: 12000,
+      estimatedMonthlyKgVolume: 10000, // 10.000 kg/mês
+      estimatedMonthlyVolume: 10000,
+      costPerKg: 1.20,
+      costPerUnit: 1.20,
       allocationBasis: 'kg',
     },
     taxSettings: {
@@ -179,7 +183,7 @@ export const defaultProducts: ProductItem[] = [
       icms: 18.0,
       pis: 1.65,
       cofins: 7.60,
-      ipi: 0,
+      ipi: 5.0,
       iss: 0,
       irpjCsll: 0,
       takeRawMaterialTaxCredits: true,
@@ -188,24 +192,24 @@ export const defaultProducts: ProductItem[] = [
       icmsCreditRate: 12.0,
       totalIrpjCsllRealRate: 34.0,
       customTaxRate: 0,
-      totalTaxRate: 27.25, // 18% + 1.65% + 7.60%
+      totalTaxRate: 32.25,
     },
     variableExpenses: {
-      salesCommissionRate: 2.0,
+      salesCommissionRate: 4.0,
       cardGatewayRate: 0,
-      marketplacePlatformRate: 14.0, // Taxa do Marketplace
-      shippingUnitCost: 18.50, // Frete grátis subsidiado
+      marketplacePlatformRate: 0,
+      shippingUnitCost: 0.50, // Frete R$ 0,50/kg
       otherVariableRate: 1.0,
-      totalVariableRate: 17.0,
+      totalVariableRate: 5.0,
     },
-    desiredProfitMargin: 15.0,
+    desiredProfitMargin: 20.0,
     pricingMethod: 'markup_divisor',
-    receivableDays: 75, // Média de 30/60/90/120 = 75 dias
-    receivableTermsType: '30_60_90_120',
-    receivableInstallments: [30, 60, 90, 120],
-    payableDays: 60, // Média de 30/60/90 = 60 dias
-    payableTermsType: '30_60_90',
-    payableInstallments: [30, 60, 90],
+    receivableDays: 45,
+    receivableTermsType: '30_60',
+    receivableInstallments: [30, 60],
+    payableDays: 30,
+    payableTermsType: '30d',
+    payableInstallments: [30],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
