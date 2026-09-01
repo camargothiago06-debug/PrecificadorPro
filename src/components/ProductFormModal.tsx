@@ -55,8 +55,6 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onSave,
   initialProduct,
 }) => {
-  if (!isOpen) return null;
-
   // Active Tab in Form
   const [activeFormTab, setActiveFormTab] = useState<'info' | 'direct' | 'ggf' | 'fixed' | 'taxes' | 'profit'>('direct');
 
@@ -230,6 +228,135 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   );
 
+  // Synchronize internal form state whenever modal is opened or initialProduct changes
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (initialProduct) {
+      setCode(initialProduct.code || '');
+      setName(initialProduct.name || '');
+      setCategory(initialProduct.category || 'Manufatura / Produção');
+      setDescription(initialProduct.description || '');
+      setTargetSalesVolume(initialProduct.targetSalesVolume || 100);
+
+      const recType = initialProduct.receivableTermsType || (initialProduct.receivableDays === 0 ? 'a_vista' : `${initialProduct.receivableDays || 30}d`);
+      setReceivableTermsType(recType);
+      setReceivableTermsCustom(initialProduct.receivableTermsCustom || '');
+      const recInst = initialProduct.receivableInstallments && initialProduct.receivableInstallments.length > 0
+        ? initialProduct.receivableInstallments
+        : [initialProduct.receivableDays ?? 30];
+      setReceivableInstallments(recInst);
+      setReceivableDays(initialProduct.receivableDays ?? calculateAverageDays(recInst));
+
+      const payType = initialProduct.payableTermsType || (initialProduct.payableDays === 0 ? 'a_vista' : `${initialProduct.payableDays || 15}d`);
+      setPayableTermsType(payType);
+      setPayableTermsCustom(initialProduct.payableTermsCustom || '');
+      const payInst = initialProduct.payableInstallments && initialProduct.payableInstallments.length > 0
+        ? initialProduct.payableInstallments
+        : [initialProduct.payableDays ?? 15];
+      setPayableInstallments(payInst);
+      setPayableDays(initialProduct.payableDays ?? calculateAverageDays(payInst));
+
+      setDirectCosts(initialProduct.directCosts || []);
+      setGgfItems(initialProduct.ggfItems || []);
+      setFixedExpenseAllocation(initialProduct.fixedExpenseAllocation || {
+        monthlyFixedExpenses: 3000,
+        estimatedMonthlyVolume: 300,
+        costPerUnit: 10.0,
+      });
+      setTaxSettings(initialProduct.taxSettings || {
+        regime: 'lucro_real',
+        simplesRate: 0,
+        icms: 18.0,
+        pis: 1.65,
+        cofins: 7.60,
+        ipi: 5.0,
+        iss: 0,
+        irpjCsll: 0,
+        takeRawMaterialTaxCredits: true,
+        pisCreditRate: 1.65,
+        cofinsCreditRate: 7.60,
+        icmsCreditRate: 12.0,
+        ipiCreditRate: 5.0,
+        totalIrpjCsllRealRate: 34.0,
+        customTaxRate: 0,
+        totalTaxRate: 32.25,
+      });
+      setVariableExpenses(initialProduct.variableExpenses || {
+        salesCommissionRate: 3.0,
+        cardGatewayRate: 2.99,
+        marketplacePlatformRate: 0,
+        shippingUnitCost: 0,
+        otherVariableRate: 1.0,
+        totalVariableRate: 6.99,
+      });
+      setDesiredProfitMargin(initialProduct.desiredProfitMargin ?? 22.0);
+      setPricingMethod(initialProduct.pricingMethod || 'markup_divisor');
+      setManualSalePrice(initialProduct.manualSalePrice);
+      setActiveFormTab('direct');
+    } else {
+      // Clean state for new product
+      setCode(`PRD-${Math.floor(100 + Math.random() * 900)}`);
+      setName('');
+      setCategory('Manufatura / Produção');
+      setDescription('');
+      setTargetSalesVolume(100);
+      setReceivableTermsType('30d');
+      setReceivableTermsCustom('');
+      setReceivableInstallments([30]);
+      setReceivableDays(30);
+      setPayableTermsType('15d');
+      setPayableTermsCustom('');
+      setPayableInstallments([15]);
+      setPayableDays(15);
+      setDirectCosts([
+        { id: `dc-${Date.now()}-1`, name: 'Insumo / Matéria-prima Principal', category: 'raw_material', unit: 'un', quantity: 1, unitCost: 15.00, totalCost: 15.00 },
+        { id: `dc-${Date.now()}-2`, name: 'Embalagem Individual', category: 'packaging', unit: 'un', quantity: 1, unitCost: 2.50, totalCost: 2.50 },
+        { id: `dc-${Date.now()}-3`, name: 'Mão de Obra Direta de Montagem/Preparo', category: 'direct_labor', unit: 'horas', quantity: 0.5, unitCost: 20.00, totalCost: 10.00 },
+      ]);
+      setGgfItems([
+        { id: `ggf-${Date.now()}-1`, name: 'Energia Elétrica das Máquinas / Oficina', category: 'energy', allocationType: 'percentage_direct_cost', value: 3.5, calculatedUnitCost: 0.96 },
+        { id: `ggf-${Date.now()}-2`, name: 'Depreciação & Manutenção de Equipamentos', category: 'depreciation', allocationType: 'fixed_per_unit', value: 2.00, calculatedUnitCost: 2.00 },
+        { id: `ggf-${Date.now()}-3`, name: 'Aluguel do Espaço de Produção Rateado', category: 'rent', allocationType: 'fixed_monthly_rate', value: 800, calculatedUnitCost: 8.00 },
+      ]);
+      setFixedExpenseAllocation({
+        monthlyFixedExpenses: 3000,
+        estimatedMonthlyVolume: 300,
+        costPerUnit: 10.00,
+      });
+      setTaxSettings({
+        regime: 'lucro_real',
+        simplesRate: 0,
+        icms: 18.0,
+        pis: 1.65,
+        cofins: 7.60,
+        ipi: 5.0,
+        iss: 0,
+        irpjCsll: 0,
+        takeRawMaterialTaxCredits: true,
+        pisCreditRate: 1.65,
+        cofinsCreditRate: 7.60,
+        icmsCreditRate: 12.0,
+        ipiCreditRate: 5.0,
+        totalIrpjCsllRealRate: 34.0,
+        customTaxRate: 0,
+        totalTaxRate: 32.25,
+      });
+      setVariableExpenses({
+        salesCommissionRate: 3.0,
+        cardGatewayRate: 2.99,
+        marketplacePlatformRate: 0,
+        shippingUnitCost: 0,
+        otherVariableRate: 1.0,
+        totalVariableRate: 6.99,
+      });
+      setDesiredProfitMargin(22.0);
+      setPricingMethod('markup_divisor');
+      setManualSalePrice(undefined);
+      setActiveFormTab('info');
+    }
+  }, [isOpen, initialProduct]);
+
   // Profit Strategy
   const [desiredProfitMargin, setDesiredProfitMargin] = useState<number>(initialProduct?.desiredProfitMargin ?? 22.0);
   const [pricingMethod, setPricingMethod] = useState<PricingMethod>(initialProduct?.pricingMethod || 'markup_divisor');
@@ -367,6 +494,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     onSave(finalProduct);
     onClose();
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
