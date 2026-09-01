@@ -13,15 +13,21 @@ export interface DirectCostItem {
   hasTaxCredit?: boolean; // Se gera crédito de PIS/COFINS/ICMS no Lucro Real
 }
 
-export type GGFAllocationType = 'percentage_direct_cost' | 'fixed_monthly_rate' | 'fixed_per_unit';
+export type GGFAllocationType = 
+  | 'rate_per_kg' // Rateio por kg da fábrica (R$ total mensal ÷ Capacidade total em kg)
+  | 'fixed_per_kg' // Custo GGF fixo em R$ por kg
+  | 'percentage_direct_cost' // % sobre o custo direto
+  | 'fixed_monthly_rate' // R$ total mensal ÷ Volume
+  | 'fixed_per_unit'; // R$ fixo por unidade
 
 export interface GGFItem {
   id: string;
   name: string;
   category: 'energy' | 'rent' | 'depreciation' | 'maintenance' | 'supervision' | 'other';
   allocationType: GGFAllocationType;
-  value: number; // % or R$ per month or R$ per unit
+  value: number; // R$/kg, % ou R$/mês ou R$/unidade
   calculatedUnitCost: number;
+  calculatedCostPerKg?: number; // Custo equivalente em R$/kg
   hasTaxCredit?: boolean; // Ex: energia elétrica gera crédito de PIS/COFINS no Lucro Real
 }
 
@@ -59,37 +65,58 @@ export interface VariableExpenses {
 }
 
 export interface FixedExpenseAllocation {
-  monthlyFixedExpenses: number; // R$ total monthly administrative & commercial fixed costs
-  estimatedMonthlyVolume: number; // Total units produced/sold in the business
-  costPerUnit: number; // monthlyFixedExpenses / estimatedMonthlyVolume
+  monthlyFixedExpenses: number; // R$ total mensal de despesas administrativas e comerciais
+  estimatedMonthlyKgVolume?: number; // Capacidade / Produção Total da Empresa em Kilogramas (kg/mês)
+  estimatedMonthlyVolume: number; // Total de unidades produzidas/vendidas no negócio
+  costPerKg?: number; // monthlyFixedExpenses / estimatedMonthlyKgVolume (R$/kg)
+  costPerUnit: number; // Rateio por unidade do produto
+  allocationBasis?: 'kg' | 'units'; // Base de rateio (Padrão: 'kg')
 }
 
 export type PricingMethod = 'markup_divisor' | 'markup_multiplier' | 'target_price';
 
 export interface CalculationResult {
-  // Direct Costs
+  // Product unit weight & measures
+  netWeightKg: number; // Peso líquido unitário em kg
+  unitOfMeasure: string; // kg, un, pct, sc, cx, lote
+  totalMonthlyKg: number; // Volume total produzido em kg no mês
+
+  // Direct Costs (Unit & Per Kg)
   totalDirectCosts: number;
+  directCostPerKg: number;
+  directCostsPerKg: number; // Alias
   rawMaterialCost: number;
+  rawMaterialCostPerKg: number;
   packagingCost: number;
+  packagingCostPerKg: number;
   directLaborCost: number;
+  directLaborCostPerKg: number;
   otherDirectCost: number;
+  otherDirectCostPerKg: number;
 
   // GGF (Gastos Gerais de Fabricação / Custos Indiretos)
   totalGgfUnitCost: number;
+  ggfPerKg: number; // GGF em R$/kg
 
   // Total Production Cost (Custo Total de Produção)
   totalProductionCostUnit: number;
+  productionCostPerKg: number; // Custo de Produção em R$/kg
 
   // Allocated Fixed Expenses (Despesas Operacionais Fixas Rateadas)
   totalFixedExpensesUnit: number;
+  fixedExpensesPerKg: number; // Despesas Fixas em R$/kg
+  fixedExpensePerKg: number; // Alias
 
   // Total Unit Cost (Custo Integral Unitário)
   totalUnitCost: number;
+  totalCostPerKg: number; // Custo Integral Total em R$/kg
+  shippingPerKg: number;
 
   // Lucro Real Non-Cumulative Tax Credits on Raw Materials & Energy
   isLucroReal: boolean;
   totalTaxCreditsUnit: number; // Créditos fiscais recuperáveis (PIS 1.65% + COFINS 7.6% + ICMS)
   rawMaterialTaxCreditsAmount: number; // Alias para totalTaxCreditsUnit
+  taxCreditsPerKg: number;
   pisTaxCreditUnit: number;
   cofinsTaxCreditUnit: number;
   icmsTaxCreditUnit: number;
@@ -104,34 +131,45 @@ export interface CalculationResult {
   // Suggested / Final Selling Price
   markupDivisorFactor: number; // (1 - DeductionsRate)
   suggestedSalePrice: number;
+  suggestedSalePricePerKg: number;
   effectiveSalePrice: number;
+  effectiveSalePricePerKg: number;
 
-  // Financial Breakdown of Final Selling Price (DRE Unitária)
+  // Financial Breakdown of Final Selling Price (DRE Unitária & DRE por Kg)
   grossRevenue: number;
+  grossRevenuePerKg: number;
   taxesAmount: number;
+  taxesPerKg: number;
   icmsAmount: number;
   pisAmount: number;
   cofinsAmount: number;
   ipiAmount: number;
   issAmount: number;
   netRevenue: number;
+  netRevenuePerKg: number;
   variableExpensesAmount: number;
+  variableExpensesPerKg: number;
   contributionMarginAmount: number; // Net Revenue - Direct Costs - GGF
+  contributionMarginPerKg: number; // Margem de Contribuição em R$/kg
   contributionMarginRate: number; // Contribution Margin / Gross Revenue (%)
   fixedExpensesAmount: number;
 
   // Lucro Real Specifics (LAIR & IRPJ/CSLL 34% sobre o Lucro Real)
   lairAmount: number; // Lucro Antes do IRPJ e CSLL (R$)
+  lairPerKg: number;
   lairRate: number; // % LAIR sobre a receita
   irpjCsllProfitTaxAmount: number; // Provisão de 34% (15%+10% IRPJ + 9% CSLL) sobre o Lucro Real
   irpjCsllRealAmount: number; // Alias para irpjCsllProfitTaxAmount
+  irpjCsllPerKg: number;
   netProfitAmount: number; // Lucro Líquido Unitário Final (R$)
+  netProfitPerKg: number; // Lucro Líquido em R$/kg
   netProfitRate: number; // Margem Líquida Efetiva Final (%)
 
   // Key Indicators
   markupMultiplier: number; // Preço / Custo Direto
   markupOverTotalCost: number; // Preço / Custo Integral
   breakEvenQuantity: number; // Ponto de Equilíbrio em Unidades
+  breakEvenKg: number; // Ponto de Equilíbrio em Kilogramas (kg)
   breakEvenRevenue: number; // Ponto de Equilíbrio em Faturamento (R$)
   maximumDiscountRate: number; // % máximo de desconto antes do prejuízo
 }
@@ -142,7 +180,13 @@ export interface ProductItem {
   name: string;
   category: string;
   description?: string;
+  
+  // Peso e Unidade
+  netWeightKg: number; // Peso líquido da unidade em kg (ex: 1.0, 0.5, 2.5, 25.0)
+  unitOfMeasure?: string; // 'kg', 'un', 'pct', 'saco', 'cx', 'lote'
+  
   targetSalesVolume: number; // Estimativa de vendas por mês (unidades)
+  factoryMonthlyKgCapacity?: number; // Capacidade total de processamento em kg da fábrica (para rateio de GGF)
   
   // Cost composition
   directCosts: DirectCostItem[];

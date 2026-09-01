@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   ChevronRight,
   Eye,
-  Clock
+  Clock,
+  Scale
 } from 'lucide-react';
 import { ProductItem } from '../types';
 import { calculateProductPricing, formatCurrencyBRL, formatPercent } from '../utils/pricingCalculator';
@@ -42,8 +43,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const isWarningMargin = calc.netProfitRate > 0 && calc.netProfitRate < 15;
   const isLossMargin = calc.netProfitRate <= 0;
 
-  const monthlyRevenue = (product.targetSalesVolume || 0) * calc.effectiveSalePrice;
-  const monthlyNetProfit = (product.targetSalesVolume || 0) * calc.netProfitAmount;
+  const monthlyVolumeUn = product.targetSalesVolume || 0;
+  const monthlyVolumeKg = monthlyVolumeUn * (product.netWeightKg || 1);
+  const monthlyRevenue = monthlyVolumeUn * calc.effectiveSalePrice;
+  const monthlyNetProfit = monthlyVolumeUn * calc.netProfitAmount;
 
   // Percentage breakdown of price
   const price = calc.effectiveSalePrice > 0 ? calc.effectiveSalePrice : 1;
@@ -77,7 +80,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <span className="text-xs font-mono font-extrabold bg-slate-100 text-slate-800 px-2.5 py-0.5 rounded-md border border-slate-200">
                 {product.code || 'ITEM'}
               </span>
-              <span className="text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-0.5 rounded-md border border-slate-200/80 truncate max-w-[180px]">
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-purple-800 bg-purple-50 px-2.5 py-0.5 rounded-md border border-purple-200">
+                <Scale className="w-3.5 h-3.5 text-purple-600" />
+                {product.netWeightKg || 1} kg
+              </span>
+              <span className="text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-0.5 rounded-md border border-slate-200/80 truncate max-w-[160px]">
                 {product.category || 'Geral'}
               </span>
               {product.taxSettings?.regime === 'lucro_real' && (
@@ -87,7 +94,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               )}
               {calc.rawMaterialTaxCreditsAmount > 0 && (
                 <span className="text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-md border border-teal-200" title="Aproveitamento de créditos de PIS/COFINS/ICMS nos insumos">
-                  Créditos Entrada: +{formatCurrencyBRL(calc.rawMaterialTaxCreditsAmount)}
+                  Créditos: +{formatCurrencyBRL(calc.rawMaterialTaxCreditsAmount)}
                 </span>
               )}
               {isHealthyMargin && (
@@ -142,23 +149,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         </div>
 
-        {/* Pricing Highlight Hero */}
-        <div className="mt-3.5 p-4 bg-slate-50 rounded-2xl border border-slate-200/90 flex items-center justify-between">
+        {/* Pricing Highlight Hero (with per unit and per kg) */}
+        <div className="mt-3.5 p-4 bg-slate-50 rounded-2xl border border-slate-200/90 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div>
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              {product.manualSalePrice ? 'Preço Praticado (Manual)' : 'Preço de Venda Sugerido'}
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+              <span>{product.manualSalePrice ? 'Preço Praticado' : 'Preço de Venda'}</span>
+              <span className="text-emerald-700 font-mono text-[11px] bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                {formatCurrencyBRL(calc.effectiveSalePricePerKg)}/kg
+              </span>
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight font-mono">
-              {formatCurrencyBRL(calc.effectiveSalePrice)}
+            <div className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight font-mono flex items-baseline gap-1.5">
+              <span>{formatCurrencyBRL(calc.effectiveSalePrice)}</span>
+              <span className="text-xs font-normal text-slate-400 font-sans">/ un</span>
             </div>
             {product.manualSalePrice && (
               <div className="text-xs text-slate-500 mt-0.5">
-                Sugerido no cálculo: <span className="font-mono font-bold text-slate-700">{formatCurrencyBRL(calc.suggestedSalePrice)}</span>
+                Sugerido: <span className="font-mono font-bold text-slate-700">{formatCurrencyBRL(calc.suggestedSalePrice)}</span>
               </div>
             )}
           </div>
 
-          <div className="text-right">
+          <div className="text-left sm:text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Margem Líquida
             </div>
@@ -167,8 +178,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             }`}>
               {formatPercent(calc.netProfitRate)}
             </div>
-            <div className="text-xs font-bold text-slate-600 font-mono">
-              +{formatCurrencyBRL(calc.netProfitAmount)} / un
+            <div className="text-xs font-bold text-slate-600 font-mono flex sm:justify-end gap-2">
+              <span>+{formatCurrencyBRL(calc.netProfitAmount)}/un</span>
+              <span className="text-emerald-700 font-extrabold">({formatCurrencyBRL(calc.netProfitPerKg)}/kg)</span>
             </div>
           </div>
         </div>
@@ -183,17 +195,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div 
               style={{ width: `${directPct}%` }} 
               className="bg-blue-500 rounded-xs transition-all" 
-              title={`Custos Diretos: ${formatPercent(directPct)} (${formatCurrencyBRL(calc.totalDirectCosts)})`} 
+              title={`Custos Diretos: ${formatPercent(directPct)} (${formatCurrencyBRL(calc.totalDirectCosts)} / ${formatCurrencyBRL(calc.directCostsPerKg)}/kg)`} 
             />
             <div 
               style={{ width: `${ggfPct}%` }} 
               className="bg-purple-500 rounded-xs transition-all" 
-              title={`GGF Indireto: ${formatPercent(ggfPct)} (${formatCurrencyBRL(calc.totalGgfUnitCost)})`} 
+              title={`GGF Indireto: ${formatPercent(ggfPct)} (${formatCurrencyBRL(calc.totalGgfUnitCost)} / ${formatCurrencyBRL(calc.ggfPerKg)}/kg)`} 
             />
             <div 
               style={{ width: `${fixedPct}%` }} 
               className="bg-slate-400 rounded-xs transition-all" 
-              title={`Despesas Fixas: ${formatPercent(fixedPct)} (${formatCurrencyBRL(calc.totalFixedExpensesUnit)})`} 
+              title={`Despesas Fixas: ${formatPercent(fixedPct)} (${formatCurrencyBRL(calc.totalFixedExpensesUnit)} / ${formatCurrencyBRL(calc.fixedExpensePerKg)}/kg)`} 
             />
             <div 
               style={{ width: `${taxPct}%` }} 
@@ -208,19 +220,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div 
               style={{ width: `${profitPct}%` }} 
               className="bg-emerald-500 rounded-xs transition-all" 
-              title={`Lucro Líquido: ${formatPercent(profitPct)} (${formatCurrencyBRL(calc.netProfitAmount)})`} 
+              title={`Lucro Líquido: ${formatPercent(profitPct)} (${formatCurrencyBRL(calc.netProfitAmount)} / ${formatCurrencyBRL(calc.netProfitPerKg)}/kg)`} 
             />
           </div>
 
           <div className="flex flex-wrap items-center justify-between text-xs text-slate-600 mt-2 gap-x-2 gap-y-1">
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Diretos: <b className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(calc.totalDirectCosts)}</b>
+            <span className="flex items-center gap-1.5 font-medium" title={`Por kg: ${formatCurrencyBRL(calc.directCostsPerKg)}/kg`}>
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Diretos: <b className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(calc.totalDirectCosts)}</b> <span className="text-[10px] text-slate-500">({formatCurrencyBRL(calc.directCostsPerKg)}/kg)</span>
             </span>
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> GGF: <b className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(calc.totalGgfUnitCost)}</b>
+            <span className="flex items-center gap-1.5 font-medium" title={`Por kg: ${formatCurrencyBRL(calc.ggfPerKg)}/kg`}>
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span> GGF: <b className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(calc.totalGgfUnitCost)}</b> <span className="text-[10px] text-purple-700">({formatCurrencyBRL(calc.ggfPerKg)}/kg)</span>
             </span>
-            <span className="flex items-center gap-1.5 font-medium">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-400"></span> Tributos: <b className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(calc.taxesAmount)}</b>
+            <span className="flex items-center gap-1.5 font-medium" title={`Custo Total por kg: ${formatCurrencyBRL(calc.totalCostPerKg)}/kg`}>
+              <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Custo Tot: <b className="text-slate-900 font-mono font-bold">{formatCurrencyBRL(calc.totalUnitCost)}</b> <span className="text-[10px] text-indigo-700 font-bold">({formatCurrencyBRL(calc.totalCostPerKg)}/kg)</span>
             </span>
           </div>
         </div>
@@ -243,26 +255,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {calc.breakEvenQuantity} <span className="text-xs font-normal text-slate-500">un</span>
             </div>
             <div className="text-xs text-slate-500 font-mono font-medium">
-              {formatCurrencyBRL(calc.breakEvenRevenue)}
+              {calc.breakEvenKg} kg/mês
             </div>
           </div>
 
           <div className="bg-slate-50 p-2.5 rounded-xl text-center">
-            <div className="text-[11px] text-slate-500 font-semibold">Markup Multiplicador</div>
+            <div className="text-[11px] text-slate-500 font-semibold">Custo Total / kg</div>
             <div className="text-sm font-black text-indigo-700 font-mono mt-0.5">
-              {calc.markupMultiplier.toFixed(2)}x
+              {formatCurrencyBRL(calc.totalCostPerKg)}
             </div>
             <div className="text-xs text-slate-500 font-mono font-medium">
-              {calc.markupOverTotalCost.toFixed(2)}x total
+              Markup: {calc.markupMultiplier.toFixed(2)}x
             </div>
           </div>
         </div>
 
-        {/* Monthly Projection Pill */}
+        {/* Monthly Projection Pill with units and kg */}
         <div className="mt-3.5 flex items-center justify-between p-3 rounded-xl bg-emerald-50/80 border border-emerald-200/70 text-xs sm:text-sm">
           <div className="flex items-center gap-2 text-slate-800 font-medium">
             <Package className="w-4 h-4 text-emerald-600" />
-            <span>Vol. Mensal: <b className="font-mono font-bold">{product.targetSalesVolume} un</b></span>
+            <span>Vol: <b className="font-mono font-bold">{monthlyVolumeUn} un</b> <span className="text-slate-500">({monthlyVolumeKg} kg/mês)</span></span>
           </div>
           <div className="text-right">
             <span className="text-slate-600 text-xs font-medium">Lucro Projetado: </span>
@@ -304,9 +316,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <div className="space-y-2.5">
               <div className="flex justify-between items-center">
                 <span className="text-slate-600 text-xs font-semibold">Novo Preço:</span>
-                <span className="font-mono font-black text-indigo-950 text-base">
-                  {formatCurrencyBRL(simulatedPrice)}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-black text-indigo-950 text-base">
+                    {formatCurrencyBRL(simulatedPrice)}/un
+                  </span>
+                  <span className="font-mono font-bold text-purple-700 text-xs">
+                    ({formatCurrencyBRL(simulatedPrice / Math.max(0.001, product.netWeightKg || 1))}/kg)
+                  </span>
+                </div>
               </div>
               <input
                 type="range"
@@ -318,7 +335,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 className="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
               />
               <div className="flex justify-between text-xs text-slate-500 font-medium">
-                <span>Custo Total: {formatCurrencyBRL(calc.totalUnitCost)}</span>
+                <span>Custo: {formatCurrencyBRL(calc.totalUnitCost)} ({formatCurrencyBRL(calc.totalCostPerKg)}/kg)</span>
                 <span>Desconto Máx Seguro: {formatPercent(calc.maximumDiscountRate)}</span>
               </div>
             </div>

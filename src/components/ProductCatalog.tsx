@@ -13,7 +13,8 @@ import {
   Percent,
   Sliders,
   CheckCircle2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Scale
 } from 'lucide-react';
 import { ProductItem } from '../types';
 import { ProductCard } from './ProductCard';
@@ -40,7 +41,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [sortBy, setSortBy] = useState<'name' | 'margin_desc' | 'margin_asc' | 'price_desc' | 'profit_desc' | 'volume_desc'>('margin_desc');
+  const [sortBy, setSortBy] = useState<'name' | 'margin_desc' | 'margin_asc' | 'price_desc' | 'profit_desc' | 'volume_desc' | 'price_kg_desc' | 'cost_kg_desc'>('margin_desc');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Categories list
@@ -60,11 +61,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
     let totalMonthlyGgf = 0;
     let totalMonthlyTaxes = 0;
     let totalMonthlyUnits = 0;
+    let totalMonthlyKg = 0;
 
     products.forEach((product) => {
       const calc = calculateProductPricing(product);
       const volume = product.targetSalesVolume || 0;
+      const weight = product.netWeightKg || 1;
       totalMonthlyUnits += volume;
+      totalMonthlyKg += volume * weight;
       totalMonthlyRevenue += volume * calc.effectiveSalePrice;
       totalMonthlyNetProfit += volume * calc.netProfitAmount;
       totalMonthlyDirectCosts += volume * calc.totalDirectCosts;
@@ -76,6 +80,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       ? (totalMonthlyNetProfit / totalMonthlyRevenue) * 100 
       : 0;
 
+    const averageGgfPerKg = totalMonthlyKg > 0
+      ? totalMonthlyGgf / totalMonthlyKg
+      : 0;
+
     return {
       totalMonthlyRevenue,
       totalMonthlyNetProfit,
@@ -83,7 +91,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
       totalMonthlyGgf,
       totalMonthlyTaxes,
       totalMonthlyUnits,
+      totalMonthlyKg,
       averageMarginRate,
+      averageGgfPerKg,
     };
   }, [products]);
 
@@ -105,6 +115,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
         if (sortBy === 'margin_desc') return calcB.netProfitRate - calcA.netProfitRate;
         if (sortBy === 'margin_asc') return calcA.netProfitRate - calcB.netProfitRate;
         if (sortBy === 'price_desc') return calcB.effectiveSalePrice - calcA.effectiveSalePrice;
+        if (sortBy === 'price_kg_desc') return calcB.effectiveSalePricePerKg - calcA.effectiveSalePricePerKg;
+        if (sortBy === 'cost_kg_desc') return calcB.totalCostPerKg - calcA.totalCostPerKg;
         if (sortBy === 'profit_desc') {
           const profitA = (a.targetSalesVolume || 0) * calcA.netProfitAmount;
           const profitB = (b.targetSalesVolume || 0) * calcB.netProfitAmount;
@@ -134,9 +146,15 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               {formatCurrencyBRL(portfolioSummary.totalMonthlyRevenue)}
             </div>
           </div>
-          <div className="mt-3 pt-2.5 border-t border-blue-100/80 flex items-center gap-1.5 text-xs sm:text-sm text-slate-600 font-medium">
-            <Package className="w-4 h-4 text-blue-600" />
-            <span>Volume total: <b className="text-slate-900 font-mono font-bold">{portfolioSummary.totalMonthlyUnits}</b> un/mês</span>
+          <div className="mt-3 pt-2.5 border-t border-blue-100/80 flex items-center justify-between text-xs sm:text-sm text-slate-600 font-medium">
+            <span className="flex items-center gap-1.5">
+              <Package className="w-4 h-4 text-blue-600" />
+              <span><b className="text-slate-900 font-mono font-bold">{portfolioSummary.totalMonthlyUnits}</b> un/mês</span>
+            </span>
+            <span className="flex items-center gap-1 text-purple-700 font-mono font-bold">
+              <Scale className="w-3.5 h-3.5" />
+              <span>{portfolioSummary.totalMonthlyKg} kg/mês</span>
+            </span>
           </div>
         </div>
 
@@ -178,6 +196,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           </div>
           <div className="mt-3 pt-2.5 border-t border-purple-100/80 flex items-center justify-between text-xs sm:text-sm text-slate-600 font-medium">
             <span>GGF indireto: <b className="text-purple-700 font-mono font-bold">{formatCurrencyBRL(portfolioSummary.totalMonthlyGgf)}</b></span>
+            <span className="text-purple-700 font-mono text-xs">({formatCurrencyBRL(portfolioSummary.averageGgfPerKg)}/kg)</span>
           </div>
         </div>
 
@@ -247,7 +266,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               <option value="margin_desc">Maior Margem (%)</option>
               <option value="margin_asc">Menor Margem (%)</option>
               <option value="profit_desc">Maior Lucro Mensal (R$)</option>
-              <option value="price_desc">Maior Preço (R$)</option>
+              <option value="price_desc">Maior Preço / un (R$)</option>
+              <option value="price_kg_desc">Maior Preço / kg (R$/kg)</option>
+              <option value="cost_kg_desc">Maior Custo / kg (R$/kg)</option>
               <option value="volume_desc">Maior Volume (un)</option>
               <option value="name">Nome (A-Z)</option>
             </select>
@@ -326,7 +347,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
           <div className="p-5 border-b border-slate-200 flex items-center justify-between">
             <h3 className="font-bold text-slate-900 text-base flex items-center gap-2.5">
               <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-              Tabela Comparativa de Custos, GGF, Impostos e Preços
+              Tabela Comparativa de Custos, GGF por Kg, Impostos e Preços
             </h3>
             <button
               onClick={onExportCSV}
@@ -342,16 +363,16 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               <thead className="bg-slate-50/90 text-slate-700 font-bold border-b border-slate-200 uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="py-3.5 px-4 font-sans">Item / Código</th>
-                  <th className="py-3.5 px-3 font-sans">Categoria</th>
+                  <th className="py-3.5 px-3 font-sans">Peso (kg)</th>
                   <th className="py-3.5 px-3 text-right">Custos Diretos</th>
-                  <th className="py-3.5 px-3 text-right">GGF Indireto</th>
+                  <th className="py-3.5 px-3 text-right">GGF (un / kg)</th>
                   <th className="py-3.5 px-3 text-right">Desp. Fixas</th>
-                  <th className="py-3.5 px-3 text-right">Custo Total</th>
+                  <th className="py-3.5 px-3 text-right">Custo Tot. (un / kg)</th>
                   <th className="py-3.5 px-3 text-right">Impostos %</th>
                   <th className="py-3.5 px-3 text-right">Comissões %</th>
-                  <th className="py-3.5 px-3 text-right font-bold text-slate-950">Preço Venda</th>
+                  <th className="py-3.5 px-3 text-right font-bold text-slate-950">Preço Venda (un / kg)</th>
                   <th className="py-3.5 px-3 text-right">Margem Líq. %</th>
-                  <th className="py-3.5 px-3 text-right">Lucro Unit (R$)</th>
+                  <th className="py-3.5 px-3 text-right">Lucro (un / kg)</th>
                   <th className="py-3.5 px-3 text-right font-sans">Vol/Mês</th>
                   <th className="py-3.5 px-3 text-right text-emerald-800">Lucro Mês (R$)</th>
                   <th className="py-3.5 px-4 text-center font-sans">Ações</th>
@@ -366,24 +387,33 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                     <tr key={product.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3.5 px-4 font-sans font-medium text-slate-900">
                         <div className="font-bold text-sm text-slate-950">{product.name}</div>
-                        <div className="text-xs text-slate-400 font-mono">{product.code}</div>
+                        <div className="text-xs text-slate-400 font-mono flex items-center gap-1.5">
+                          <span>{product.code}</span>
+                          <span>•</span>
+                          <span className="text-slate-500 font-sans">{product.category}</span>
+                        </div>
                       </td>
-                      <td className="py-3.5 px-3 font-sans text-slate-600">
-                        <span className="bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-lg text-xs">
-                          {product.category}
+                      <td className="py-3.5 px-3 font-sans text-slate-700">
+                        <span className="bg-purple-50 text-purple-800 font-bold px-2 py-0.5 rounded-md border border-purple-200 text-xs inline-flex items-center gap-1">
+                          <Scale className="w-3 h-3 text-purple-600" />
+                          {product.netWeightKg || 1} kg
                         </span>
                       </td>
                       <td className="py-3.5 px-3 text-right text-blue-700 font-semibold">
-                        {formatCurrencyBRL(calc.totalDirectCosts)}
+                        <div>{formatCurrencyBRL(calc.totalDirectCosts)}</div>
+                        <div className="text-[10px] text-slate-500">{formatCurrencyBRL(calc.directCostsPerKg)}/kg</div>
                       </td>
                       <td className="py-3.5 px-3 text-right text-purple-700 font-semibold">
-                        {formatCurrencyBRL(calc.totalGgfUnitCost)}
+                        <div>{formatCurrencyBRL(calc.totalGgfUnitCost)}</div>
+                        <div className="text-[10px] text-purple-600 font-bold">{formatCurrencyBRL(calc.ggfPerKg)}/kg</div>
                       </td>
                       <td className="py-3.5 px-3 text-right text-slate-600">
-                        {formatCurrencyBRL(calc.totalFixedExpensesUnit)}
+                        <div>{formatCurrencyBRL(calc.totalFixedExpensesUnit)}</div>
+                        <div className="text-[10px] text-slate-500">{formatCurrencyBRL(calc.fixedExpensePerKg)}/kg</div>
                       </td>
                       <td className="py-3.5 px-3 text-right font-bold text-slate-900">
-                        {formatCurrencyBRL(calc.totalUnitCost)}
+                        <div>{formatCurrencyBRL(calc.totalUnitCost)}</div>
+                        <div className="text-[10px] text-indigo-700 font-bold">{formatCurrencyBRL(calc.totalCostPerKg)}/kg</div>
                       </td>
                       <td className="py-3.5 px-3 text-right text-rose-600 font-semibold">
                         {formatPercent(calc.totalTaxRate)}
@@ -392,7 +422,8 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         {formatPercent(calc.totalVariableRate)}
                       </td>
                       <td className="py-3.5 px-3 text-right font-black text-slate-950 bg-emerald-50/60 text-sm">
-                        {formatCurrencyBRL(calc.effectiveSalePrice)}
+                        <div>{formatCurrencyBRL(calc.effectiveSalePrice)}</div>
+                        <div className="text-[11px] text-emerald-800 font-bold">{formatCurrencyBRL(calc.effectiveSalePricePerKg)}/kg</div>
                       </td>
                       <td className={`py-3.5 px-3 text-right font-black ${
                         calc.netProfitRate >= 15 ? 'text-emerald-700' : calc.netProfitRate > 0 ? 'text-amber-700' : 'text-rose-700'
@@ -400,10 +431,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
                         {formatPercent(calc.netProfitRate)}
                       </td>
                       <td className="py-3.5 px-3 text-right text-emerald-700 font-bold">
-                        {formatCurrencyBRL(calc.netProfitAmount)}
+                        <div>+{formatCurrencyBRL(calc.netProfitAmount)}</div>
+                        <div className="text-[10px] text-emerald-800">+{formatCurrencyBRL(calc.netProfitPerKg)}/kg</div>
                       </td>
                       <td className="py-3.5 px-3 text-right text-slate-700 font-bold">
-                        {product.targetSalesVolume} un
+                        <div>{product.targetSalesVolume} un</div>
+                        <div className="text-[10px] text-slate-500">{(product.targetSalesVolume || 0) * (product.netWeightKg || 1)} kg</div>
                       </td>
                       <td className="py-3.5 px-3 text-right font-black text-emerald-700">
                         {formatCurrencyBRL(monthlyProfit)}

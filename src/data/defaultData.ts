@@ -18,7 +18,10 @@ export const defaultProducts: ProductItem[] = [
     name: 'Bolsa Executiva de Couro Legítimo',
     category: 'Manufatura & Indústria',
     description: 'Bolsa estruturada em couro legítimo bovino com forro acetinado e metais dourados.',
+    netWeightKg: 1.25, // 1.25 kg por unidade
+    unitOfMeasure: 'un',
     targetSalesVolume: 80,
+    factoryMonthlyKgCapacity: 600, // 600 kg/mês capacidade da fábrica
     directCosts: [
       { id: 'dc-1', name: 'Couro Bovino Premium (m²)', category: 'raw_material', unit: 'm²', quantity: 0.85, unitCost: 85.00, totalCost: 72.25, hasTaxCredit: true },
       { id: 'dc-2', name: 'Forro Jacquard / Cetim', category: 'raw_material', unit: 'm', quantity: 0.90, unitCost: 18.00, totalCost: 16.20, hasTaxCredit: true },
@@ -27,15 +30,18 @@ export const defaultProducts: ProductItem[] = [
       { id: 'dc-5', name: 'Mão de Obra Direta (Corte e Costura 2.5h)', category: 'direct_labor', unit: 'horas', quantity: 2.5, unitCost: 24.00, totalCost: 60.00 },
     ],
     ggfItems: [
-      { id: 'ggf-1', name: 'Energia Elétrica das Máquinas de Costura', category: 'energy', allocationType: 'percentage_direct_cost', value: 3.5, calculatedUnitCost: 6.30, hasTaxCredit: true },
-      { id: 'ggf-2', name: 'Aluguel do Ateliê/Galpão Rateado', category: 'rent', allocationType: 'fixed_monthly_rate', value: 1200, calculatedUnitCost: 15.00 },
-      { id: 'ggf-3', name: 'Depreciação & Manutenção Maquinário', category: 'depreciation', allocationType: 'fixed_per_unit', value: 4.50, calculatedUnitCost: 4.50 },
-      { id: 'ggf-4', name: 'Supervisão de Produção e Controle de Qualidade', category: 'supervision', allocationType: 'percentage_direct_cost', value: 2.0, calculatedUnitCost: 3.60 },
+      { id: 'ggf-1', name: 'Energia Elétrica das Máquinas de Costura', category: 'energy', allocationType: 'rate_per_kg', value: 3600, calculatedUnitCost: 7.50, hasTaxCredit: true },
+      { id: 'ggf-2', name: 'Aluguel do Ateliê/Galpão Rateado por kg', category: 'rent', allocationType: 'rate_per_kg', value: 7200, calculatedUnitCost: 15.00 },
+      { id: 'ggf-3', name: 'Depreciação & Manutenção Maquinário', category: 'depreciation', allocationType: 'fixed_per_kg', value: 3.60, calculatedUnitCost: 4.50 },
+      { id: 'ggf-4', name: 'Supervisão de Produção e Qualidade', category: 'supervision', allocationType: 'fixed_per_kg', value: 2.88, calculatedUnitCost: 3.60 },
     ],
     fixedExpenseAllocation: {
       monthlyFixedExpenses: 4500,
+      estimatedMonthlyKgVolume: 375, // 300 un x 1.25 kg = 375 kg
       estimatedMonthlyVolume: 300,
+      costPerKg: 12.00,
       costPerUnit: 15.00,
+      allocationBasis: 'kg',
     },
     taxSettings: {
       regime: 'lucro_real',
@@ -80,7 +86,10 @@ export const defaultProducts: ProductItem[] = [
     name: 'Linha de Panificação & Tortas Gourmet 1.5kg',
     category: 'Indústria Alimentícia',
     description: 'Produto alimentício de fabricação industrial com insumos primários e cadeia fria.',
+    netWeightKg: 1.50, // 1.5 kg por unidade
+    unitOfMeasure: 'kg',
     targetSalesVolume: 180,
+    factoryMonthlyKgCapacity: 1200, // 1200 kg/mês capacidade total
     directCosts: [
       { id: 'dc-201', name: 'Laticínios & Insumos Base', category: 'raw_material', unit: 'kit', quantity: 1, unitCost: 22.80, totalCost: 22.80, hasTaxCredit: true },
       { id: 'dc-202', name: 'Ingredientes Nobres & Chocolates', category: 'raw_material', unit: 'g', quantity: 300, unitCost: 0.06, totalCost: 18.00, hasTaxCredit: true },
@@ -89,14 +98,17 @@ export const defaultProducts: ProductItem[] = [
       { id: 'dc-205', name: 'Mão de Obra de Produção (1h)', category: 'direct_labor', unit: 'horas', quantity: 1.0, unitCost: 22.00, totalCost: 22.00 },
     ],
     ggfItems: [
-      { id: 'ggf-201', name: 'Gás Industrial & Forno Elétrico Contínuo', category: 'energy', allocationType: 'fixed_per_unit', value: 4.80, calculatedUnitCost: 4.80, hasTaxCredit: true },
-      { id: 'ggf-202', name: 'Água Industrial e Higienização Sanitária', category: 'maintenance', allocationType: 'fixed_per_unit', value: 2.00, calculatedUnitCost: 2.00 },
-      { id: 'ggf-203', name: 'Depreciação de Câmaras Frias e Misturadores', category: 'depreciation', allocationType: 'fixed_per_unit', value: 2.50, calculatedUnitCost: 2.50 },
+      { id: 'ggf-201', name: 'Gás Industrial & Forno Elétrico Contínuo', category: 'energy', allocationType: 'fixed_per_kg', value: 3.20, calculatedUnitCost: 4.80, hasTaxCredit: true },
+      { id: 'ggf-202', name: 'Água Industrial e Higienização Sanitária', category: 'maintenance', allocationType: 'fixed_per_kg', value: 1.3333, calculatedUnitCost: 2.00 },
+      { id: 'ggf-203', name: 'Depreciação de Câmaras Frias e Misturadores', category: 'depreciation', allocationType: 'rate_per_kg', value: 2000, calculatedUnitCost: 2.50 },
     ],
     fixedExpenseAllocation: {
       monthlyFixedExpenses: 3800,
+      estimatedMonthlyKgVolume: 525, // 350 un x 1.5 kg = 525 kg
       estimatedMonthlyVolume: 350,
+      costPerKg: 7.238,
       costPerUnit: 10.85,
+      allocationBasis: 'kg',
     },
     taxSettings: {
       regime: 'lucro_real',
@@ -140,20 +152,26 @@ export const defaultProducts: ProductItem[] = [
     name: 'Kit Teclado Mecânico RGB Wireless Switch Red',
     category: 'Comércio / Distribuição',
     description: 'Teclado mecânico compacto 75% hot-swappable para produtividade e jogos.',
+    netWeightKg: 0.85, // 0.85 kg por unidade
+    unitOfMeasure: 'un',
     targetSalesVolume: 120,
+    factoryMonthlyKgCapacity: 500,
     directCosts: [
       { id: 'dc-301', name: 'Custo de Aquisição com Fornecedor Nacional', category: 'raw_material', unit: 'un', quantity: 1, unitCost: 145.00, totalCost: 145.00, hasTaxCredit: true },
       { id: 'dc-302', name: 'Caixa de Envio Reforçada + Fita Gomada', category: 'packaging', unit: 'un', quantity: 1, unitCost: 4.80, totalCost: 4.80, hasTaxCredit: true },
       { id: 'dc-303', name: 'Etiquetagem, Conferência e Teste de Bancada', category: 'direct_labor', unit: 'horas', quantity: 0.25, unitCost: 20.00, totalCost: 5.00 },
     ],
     ggfItems: [
-      { id: 'ggf-301', name: 'Espaço de Armazenagem & Estoque', category: 'rent', allocationType: 'fixed_per_unit', value: 3.50, calculatedUnitCost: 3.50 },
-      { id: 'ggf-302', name: 'Sistemas ERP e Impressora Térmica', category: 'depreciation', allocationType: 'fixed_per_unit', value: 2.00, calculatedUnitCost: 2.00 },
+      { id: 'ggf-301', name: 'Espaço de Armazenagem & Estoque Rateado', category: 'rent', allocationType: 'fixed_per_kg', value: 4.1176, calculatedUnitCost: 3.50 },
+      { id: 'ggf-302', name: 'Sistemas ERP e Impressora Térmica', category: 'depreciation', allocationType: 'fixed_per_kg', value: 2.3529, calculatedUnitCost: 2.00 },
     ],
     fixedExpenseAllocation: {
       monthlyFixedExpenses: 4200,
+      estimatedMonthlyKgVolume: 340, // 400 un x 0.85 kg = 340 kg
       estimatedMonthlyVolume: 400,
+      costPerKg: 12.35,
       costPerUnit: 10.50,
+      allocationBasis: 'kg',
     },
     taxSettings: {
       regime: 'lucro_real',

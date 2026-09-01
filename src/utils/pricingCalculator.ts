@@ -25,29 +25,56 @@ export function calculateDirectCosts(items: DirectCostItem[]) {
   };
 }
 
-export function calculateGgfUnitCost(ggfItems: GGFItem[], totalDirectCosts: number, targetMonthlyVolume: number): { totalGgfUnitCost: number; updatedGgfItems: GGFItem[] } {
+export function calculateGgfUnitCost(
+  ggfItems: GGFItem[], 
+  totalDirectCosts: number, 
+  targetMonthlyVolume: number,
+  netWeightKg: number = 1.0,
+  factoryMonthlyKgCapacity?: number
+): { totalGgfUnitCost: number; ggfPerKg: number; updatedGgfItems: GGFItem[] } {
   const safeVolume = Math.max(1, targetMonthlyVolume || 1);
+  const weight = Math.max(0.0001, netWeightKg || 1.0);
+  const factoryKg = Math.max(1, factoryMonthlyKgCapacity || (safeVolume * weight));
   
   const updatedGgfItems = ggfItems.map((item) => {
     let calculatedUnit = 0;
-    if (item.allocationType === 'percentage_direct_cost') {
+    let calculatedKg = 0;
+
+    if (item.allocationType === 'rate_per_kg') {
+      // Rateio do total de GGF pelo total de kg da fábrica no mês: (R$ total mês / Total kg fábrica) * Peso líquido (kg)
+      calculatedKg = (item.value || 0) / factoryKg;
+      calculatedUnit = calculatedKg * weight;
+    } else if (item.allocationType === 'fixed_per_kg') {
+      // Valor direto de GGF por kg (ex: R$ 3,50 por kg)
+      calculatedKg = item.value || 0;
+      calculatedUnit = calculatedKg * weight;
+    } else if (item.allocationType === 'percentage_direct_cost') {
+      // % sobre o custo direto total
       calculatedUnit = totalDirectCosts * ((item.value || 0) / 100);
+      calculatedKg = calculatedUnit / weight;
     } else if (item.allocationType === 'fixed_monthly_rate') {
+      // R$ total mensal dividido pelas unidades
       calculatedUnit = (item.value || 0) / safeVolume;
+      calculatedKg = calculatedUnit / weight;
     } else {
-      // fixed_per_unit
+      // fixed_per_unit: R$ fixo por unidade
       calculatedUnit = item.value || 0;
+      calculatedKg = calculatedUnit / weight;
     }
+
     return {
       ...item,
       calculatedUnitCost: Number(calculatedUnit.toFixed(4)),
+      calculatedCostPerKg: Number(calculatedKg.toFixed(4)),
     };
   });
 
   const totalGgfUnitCost = updatedGgfItems.reduce((acc, curr) => acc + curr.calculatedUnitCost, 0);
+  const ggfPerKg = totalGgfUnitCost / weight;
 
   return {
-    totalGgfUnitCost,
+    totalGgfUnitCost: Number(totalGgfUnitCost.toFixed(2)),
+    ggfPerKg: Number(ggfPerKg.toFixed(2)),
     updatedGgfItems,
   };
 }
@@ -98,13 +125,25 @@ export function calculateTotalVariableRate(variableExpenses: VariableExpenses): 
 
 export function calculateProductPricing(product: ProductItem): CalculationResult {
   const isLucroReal = product.taxSettings?.regime === 'lucro_real';
+  const netWeightKg = Math.max(0.0001, product.netWeightKg !== undefined ? product.netWeightKg : 1.0);
+  const unitOfMeasure = product.unitOfMeasure || 'un';
+  const targetVolume = Math.max(1, product.targetSalesVolume || 1);
+  const totalMonthlyKg = targetVolume * netWeightKg;
+
   const { totalDirectCosts, rawMaterialCost, packagingCost, directLaborCost, otherDirectCost } = calculateDirectCosts(product.directCosts || []);
   
-  const targetVolume = Math.max(1, product.targetSalesVolume || 1);
-  const { totalGgfUnitCost, updatedGgfItems } = calculateGgfUnitCost(product.ggfItems || [], totalDirectCosts, targetVolume);
+  // Factory Monthly Capacity in Kg (used for rateio by kg of factory)
+  const factoryKgCapacity = product.factoryMonthlyKgCapacity || product.fixedExpenseAllocation?.estimatedMonthlyKgVolume || totalMonthlyKg;
+
+  const { totalGgfUnitCost, ggfPerKg, updatedGgfItems } = calculateGgfUnitCost(
+    product.ggfItems || [], 
+    totalDirectCosts, 
+    targetVolume,
+    netWeightKg,
+    factoryKgCapacity
+  );
 
   // Lucro Real: Cálculo de Créditos Tributários na Entrada (Regime Não-Cumulativo)
-  // Empresas no Lucro Real tomam créditos de PIS (1,65%) e COFINS (7,60%) = 9,25% sobre matérias-primas, insumos e energia elétrica da fábrica
   let totalTaxCreditsUnit = 0;
   let pisTaxCreditUnit = 0;
   let cofinsTaxCreditUnit = 0;
@@ -138,13 +177,32 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
 
   const totalProductionCostUnit = effectiveDirectCostToUse + totalGgfUnitCost;
 
-  // Fixed Expense Allocation
+  // Fixed Expense Allocation (Rateio por kg ou por unidade)
   const fixedAlloc = product.fixedExpenseAllocation || { monthlyFixedExpenses: 0, estimatedMonthlyVolume: 100, costPerUnit: 0 };
-  const globalVolume = Math.max(1, fixedAlloc.estimatedMonthlyVolume || 100);
-  const totalFixedExpensesUnit = fixedAlloc.monthlyFixedExpenses ? (fixedAlloc.monthlyFixedExpenses / globalVolume) : (fixedAlloc.costPerUnit || 0);
+  let totalFixedExpensesUnit = 0;
+  let fixedExpensesPerKg = 0;
+
+  if (fixedAlloc.allocationBasis === 'units' && fixedAlloc.monthlyFixedExpenses > 0) {
+    const globalVolume = Math.max(1, fixedAlloc.estimatedMonthlyVolume || 100);
+    totalFixedExpensesUnit = fixedAlloc.monthlyFixedExpenses / globalVolume;
+    fixedExpensesPerKg = totalFixedExpensesUnit / netWeightKg;
+  } else if (fixedAlloc.monthlyFixedExpenses > 0) {
+    // Padrão: Rateio por Kilograma (kg)
+    const globalKgVolume = Math.max(1, fixedAlloc.estimatedMonthlyKgVolume || (fixedAlloc.estimatedMonthlyVolume * netWeightKg) || totalMonthlyKg);
+    fixedExpensesPerKg = fixedAlloc.monthlyFixedExpenses / globalKgVolume;
+    totalFixedExpensesUnit = fixedExpensesPerKg * netWeightKg;
+  } else if (fixedAlloc.costPerKg && fixedAlloc.costPerKg > 0) {
+    fixedExpensesPerKg = fixedAlloc.costPerKg;
+    totalFixedExpensesUnit = fixedExpensesPerKg * netWeightKg;
+  } else {
+    totalFixedExpensesUnit = fixedAlloc.costPerUnit || 0;
+    fixedExpensesPerKg = totalFixedExpensesUnit / netWeightKg;
+  }
 
   const shippingUnitCost = product.variableExpenses?.shippingUnitCost || 0;
+  const shippingPerKg = shippingUnitCost / netWeightKg;
   const totalUnitCost = totalProductionCostUnit + totalFixedExpensesUnit + shippingUnitCost;
+  const totalCostPerKg = totalUnitCost / netWeightKg;
 
   // Deduction Rates
   const totalTaxRate = calculateEffectiveTaxRate(product.taxSettings);
@@ -152,8 +210,6 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
   const desiredProfitRate = product.desiredProfitMargin || 0;
 
   // Lucro Real IRPJ & CSLL:
-  // No Lucro Real, IRPJ (15% + 10% adicional) e CSLL (9%) = 34% incidem sobre o Lucro Real / LAIR (Lucro Antes do IR/CSLL)
-  // Para obter X% de lucro líquido final pós-IRPJ/CSLL, a margem bruta pré-imposto (LAIR) necessária é: DesiredProfit% / (1 - 0.34) = DesiredProfit% / 0.66
   const irpjCsllRealRate = product.taxSettings?.totalIrpjCsllRealRate !== undefined ? product.taxSettings.totalIrpjCsllRealRate : 34;
   const preTaxProfitMarginRequired = isLucroReal && irpjCsllRealRate > 0
     ? desiredProfitRate / (1 - (irpjCsllRealRate / 100))
@@ -162,12 +218,12 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
   const totalDeductionsRate = totalTaxRate + totalVariableRate + preTaxProfitMarginRequired;
 
   // Markup Divisor (Margem por Dentro)
-  // PV = BaseCost / (1 - (Taxes% + Var% + LAIR%) / 100)
   const divisorFactor = 1 - (totalDeductionsRate / 100);
   const safeDivisor = divisorFactor > 0.02 ? divisorFactor : 0.02;
 
   const baseCostToCover = totalProductionCostUnit + totalFixedExpensesUnit + shippingUnitCost;
   const suggestedSalePrice = Number((baseCostToCover / safeDivisor).toFixed(2));
+  const suggestedSalePricePerKg = Number((suggestedSalePrice / netWeightKg).toFixed(2));
 
   // Determine Effective Selling Price
   let effectiveSalePrice = suggestedSalePrice;
@@ -180,8 +236,11 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
     effectiveSalePrice = product.manualSalePrice;
   }
 
+  const effectiveSalePricePerKg = Number((effectiveSalePrice / netWeightKg).toFixed(2));
+
   // DRE Unitária Breakdown based on Effective Selling Price
   const grossRevenue = effectiveSalePrice;
+  const grossRevenuePerKg = effectiveSalePricePerKg;
   
   // Detalhamento de impostos sobre o faturamento de venda
   let icmsAmount = 0;
@@ -210,19 +269,24 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
   }
 
   const taxesAmount = Number((grossRevenue * (totalTaxRate / 100)).toFixed(2));
+  const taxesPerKg = Number((taxesAmount / netWeightKg).toFixed(2));
   const netRevenue = Number((grossRevenue - taxesAmount).toFixed(2));
+  const netRevenuePerKg = Number((netRevenue / netWeightKg).toFixed(2));
 
   const percentageVariableAmount = Number((grossRevenue * (totalVariableRate / 100)).toFixed(2));
   const variableExpensesAmount = Number((percentageVariableAmount + shippingUnitCost).toFixed(2));
+  const variableExpensesPerKg = Number((variableExpensesAmount / netWeightKg).toFixed(2));
 
   // Margem de Contribuição = Receita Líquida - Despesas Variáveis - Custos de Produção (CD + GGF)
   const contributionMarginAmount = Number((netRevenue - variableExpensesAmount - totalProductionCostUnit).toFixed(2));
+  const contributionMarginPerKg = Number((contributionMarginAmount / netWeightKg).toFixed(2));
   const contributionMarginRate = grossRevenue > 0 ? Number(((contributionMarginAmount / grossRevenue) * 100).toFixed(2)) : 0;
 
   const fixedExpensesAmount = Number(totalFixedExpensesUnit.toFixed(2));
 
   // LAIR (Lucro Antes do IRPJ e CSLL)
   const lairAmount = Number((contributionMarginAmount - fixedExpensesAmount).toFixed(2));
+  const lairPerKg = Number((lairAmount / netWeightKg).toFixed(2));
   const lairRate = grossRevenue > 0 ? Number(((lairAmount / grossRevenue) * 100).toFixed(2)) : 0;
 
   // Provisão IRPJ (15% + 10%) e CSLL (9%) no Lucro Real (Total 34%)
@@ -230,9 +294,11 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
   if (isLucroReal && lairAmount > 0 && irpjCsllRealRate > 0) {
     irpjCsllProfitTaxAmount = Number((lairAmount * (irpjCsllRealRate / 100)).toFixed(2));
   }
+  const irpjCsllPerKg = Number((irpjCsllProfitTaxAmount / netWeightKg).toFixed(2));
 
   // Lucro Líquido Real Final
   const netProfitAmount = Number((lairAmount - irpjCsllProfitTaxAmount).toFixed(2));
+  const netProfitPerKg = Number((netProfitAmount / netWeightKg).toFixed(2));
   const netProfitRate = grossRevenue > 0 ? Number(((netProfitAmount / grossRevenue) * 100).toFixed(2)) : 0;
 
   // Key Indicators
@@ -246,9 +312,12 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
   
   let breakEvenQuantity = 0;
   let breakEvenRevenue = 0;
+  let breakEvenKg = 0;
+
   if (contributionMarginAmount > 0) {
     breakEvenQuantity = Math.ceil(monthlyFixedTotal / contributionMarginAmount);
     breakEvenRevenue = Number((breakEvenQuantity * grossRevenue).toFixed(2));
+    breakEvenKg = Number((breakEvenQuantity * netWeightKg).toFixed(2));
   }
 
   // Preço Mínimo onde Lucro Líquido = 0
@@ -262,21 +331,38 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
   }
 
   return {
+    netWeightKg,
+    unitOfMeasure,
+    totalMonthlyKg: Number(totalMonthlyKg.toFixed(2)),
+
     totalDirectCosts: Number(totalDirectCosts.toFixed(2)),
+    directCostPerKg: Number((totalDirectCosts / netWeightKg).toFixed(2)),
+    directCostsPerKg: Number((totalDirectCosts / netWeightKg).toFixed(2)),
     rawMaterialCost: Number(rawMaterialCost.toFixed(2)),
+    rawMaterialCostPerKg: Number((rawMaterialCost / netWeightKg).toFixed(2)),
     packagingCost: Number(packagingCost.toFixed(2)),
+    packagingCostPerKg: Number((packagingCost / netWeightKg).toFixed(2)),
     directLaborCost: Number(directLaborCost.toFixed(2)),
+    directLaborCostPerKg: Number((directLaborCost / netWeightKg).toFixed(2)),
     otherDirectCost: Number(otherDirectCost.toFixed(2)),
+    otherDirectCostPerKg: Number((otherDirectCost / netWeightKg).toFixed(2)),
 
     totalGgfUnitCost: Number(totalGgfUnitCost.toFixed(2)),
+    ggfPerKg: Number(ggfPerKg.toFixed(2)),
     totalProductionCostUnit: Number(totalProductionCostUnit.toFixed(2)),
+    productionCostPerKg: Number((totalProductionCostUnit / netWeightKg).toFixed(2)),
     totalFixedExpensesUnit: Number(totalFixedExpensesUnit.toFixed(2)),
+    fixedExpensesPerKg: Number(fixedExpensesPerKg.toFixed(2)),
+    fixedExpensePerKg: Number(fixedExpensesPerKg.toFixed(2)),
     totalUnitCost: Number(totalUnitCost.toFixed(2)),
+    totalCostPerKg: Number(totalCostPerKg.toFixed(2)),
+    shippingPerKg: Number(shippingPerKg.toFixed(2)),
 
     // Lucro Real Credits
     isLucroReal,
     totalTaxCreditsUnit,
     rawMaterialTaxCreditsAmount: totalTaxCreditsUnit,
+    taxCreditsPerKg: Number((totalTaxCreditsUnit / netWeightKg).toFixed(2)),
     pisTaxCreditUnit: Number(pisTaxCreditUnit.toFixed(2)),
     cofinsTaxCreditUnit: Number(cofinsTaxCreditUnit.toFixed(2)),
     icmsTaxCreditUnit: Number(icmsTaxCreditUnit.toFixed(2)),
@@ -289,32 +375,43 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
 
     markupDivisorFactor: Number(safeDivisor.toFixed(4)),
     suggestedSalePrice,
+    suggestedSalePricePerKg,
     effectiveSalePrice,
+    effectiveSalePricePerKg,
 
     grossRevenue,
+    grossRevenuePerKg,
     taxesAmount,
+    taxesPerKg,
     icmsAmount,
     pisAmount,
     cofinsAmount,
     ipiAmount,
     issAmount,
     netRevenue,
+    netRevenuePerKg,
     variableExpensesAmount,
+    variableExpensesPerKg,
     contributionMarginAmount,
+    contributionMarginPerKg,
     contributionMarginRate,
     fixedExpensesAmount,
 
     // Lucro Real DRE
     lairAmount,
+    lairPerKg,
     lairRate,
     irpjCsllProfitTaxAmount,
     irpjCsllRealAmount: irpjCsllProfitTaxAmount,
+    irpjCsllPerKg,
     netProfitAmount,
+    netProfitPerKg,
     netProfitRate,
 
     markupMultiplier,
     markupOverTotalCost,
     breakEvenQuantity,
+    breakEvenKg,
     breakEvenRevenue,
     maximumDiscountRate: Math.max(0, maximumDiscountRate),
   };
@@ -339,3 +436,9 @@ export function formatNumber(value: number): string {
   if (isNaN(value) || value === null || value === undefined) return '0';
   return new Intl.NumberFormat('pt-BR').format(value);
 }
+
+export function formatKg(value: number, decimals: number = 2): string {
+  if (isNaN(value) || value === null || value === undefined) return '0 kg';
+  return `${value.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })} kg`;
+}
+

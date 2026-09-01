@@ -18,7 +18,8 @@ import {
   Package,
   Wrench,
   Zap,
-  Info
+  Info,
+  Scale
 } from 'lucide-react';
 import { 
   ProductItem, 
@@ -57,6 +58,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 }) => {
   // Active Tab in Form
   const [activeFormTab, setActiveFormTab] = useState<'info' | 'direct' | 'ggf' | 'fixed' | 'taxes' | 'profit'>('direct');
+  const [displayMetricBasis, setDisplayMetricBasis] = useState<'unit' | 'kg'>('unit');
 
   // Form State
   const [code, setCode] = useState(initialProduct?.code || `PRD-${Math.floor(100 + Math.random() * 900)}`);
@@ -64,6 +66,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [category, setCategory] = useState(initialProduct?.category || 'Manufatura / Produção');
   const [description, setDescription] = useState(initialProduct?.description || '');
   const [targetSalesVolume, setTargetSalesVolume] = useState<number>(initialProduct?.targetSalesVolume || 100);
+
+  // Weight and Mass Rateio fields
+  const [netWeightKg, setNetWeightKg] = useState<number>(initialProduct?.netWeightKg || 1.0);
+  const [unitOfMeasure, setUnitOfMeasure] = useState<string>(initialProduct?.unitOfMeasure || 'un');
+  const [factoryMonthlyKgCapacity, setFactoryMonthlyKgCapacity] = useState<number>(initialProduct?.factoryMonthlyKgCapacity || 500);
 
   // Payment & Receipt Terms state with multi-term calculation
   const [receivableTermsType, setReceivableTermsType] = useState<string>(() => {
@@ -238,6 +245,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setCategory(initialProduct.category || 'Manufatura / Produção');
       setDescription(initialProduct.description || '');
       setTargetSalesVolume(initialProduct.targetSalesVolume || 100);
+      setNetWeightKg(initialProduct.netWeightKg ?? 1.0);
+      setUnitOfMeasure(initialProduct.unitOfMeasure || 'un');
+      setFactoryMonthlyKgCapacity(initialProduct.factoryMonthlyKgCapacity || 500);
 
       const recType = initialProduct.receivableTermsType || (initialProduct.receivableDays === 0 ? 'a_vista' : `${initialProduct.receivableDays || 30}d`);
       setReceivableTermsType(recType);
@@ -261,8 +271,11 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setGgfItems(initialProduct.ggfItems || []);
       setFixedExpenseAllocation(initialProduct.fixedExpenseAllocation || {
         monthlyFixedExpenses: 3000,
+        estimatedMonthlyKgVolume: 375,
         estimatedMonthlyVolume: 300,
+        costPerKg: 8.0,
         costPerUnit: 10.0,
+        allocationBasis: 'kg',
       });
       setTaxSettings(initialProduct.taxSettings || {
         regime: 'lucro_real',
@@ -301,6 +314,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setCategory('Manufatura / Produção');
       setDescription('');
       setTargetSalesVolume(100);
+      setNetWeightKg(1.0);
+      setUnitOfMeasure('un');
+      setFactoryMonthlyKgCapacity(500);
       setReceivableTermsType('30d');
       setReceivableTermsCustom('');
       setReceivableInstallments([30]);
@@ -315,14 +331,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         { id: `dc-${Date.now()}-3`, name: 'Mão de Obra Direta de Montagem/Preparo', category: 'direct_labor', unit: 'horas', quantity: 0.5, unitCost: 20.00, totalCost: 10.00 },
       ]);
       setGgfItems([
-        { id: `ggf-${Date.now()}-1`, name: 'Energia Elétrica das Máquinas / Oficina', category: 'energy', allocationType: 'percentage_direct_cost', value: 3.5, calculatedUnitCost: 0.96 },
-        { id: `ggf-${Date.now()}-2`, name: 'Depreciação & Manutenção de Equipamentos', category: 'depreciation', allocationType: 'fixed_per_unit', value: 2.00, calculatedUnitCost: 2.00 },
-        { id: `ggf-${Date.now()}-3`, name: 'Aluguel do Espaço de Produção Rateado', category: 'rent', allocationType: 'fixed_monthly_rate', value: 800, calculatedUnitCost: 8.00 },
+        { id: `ggf-${Date.now()}-1`, name: 'Energia Elétrica das Máquinas / Oficina', category: 'energy', allocationType: 'rate_per_kg', value: 2500, calculatedUnitCost: 5.00 },
+        { id: `ggf-${Date.now()}-2`, name: 'Depreciação & Manutenção de Equipamentos', category: 'depreciation', allocationType: 'fixed_per_kg', value: 2.50, calculatedUnitCost: 2.50 },
+        { id: `ggf-${Date.now()}-3`, name: 'Aluguel do Espaço de Produção Rateado por kg', category: 'rent', allocationType: 'rate_per_kg', value: 3500, calculatedUnitCost: 7.00 },
       ]);
       setFixedExpenseAllocation({
         monthlyFixedExpenses: 3000,
+        estimatedMonthlyKgVolume: 500,
         estimatedMonthlyVolume: 300,
+        costPerKg: 6.00,
         costPerUnit: 10.00,
+        allocationBasis: 'kg',
       });
       setTaxSettings({
         regime: 'lucro_real',
@@ -369,6 +388,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     name: name || 'Novo Produto em Precificação',
     category,
     description,
+    netWeightKg: Number(netWeightKg) || 1,
+    unitOfMeasure: unitOfMeasure || 'un',
+    factoryMonthlyKgCapacity: Number(factoryMonthlyKgCapacity) || 500,
     targetSalesVolume: Number(targetSalesVolume) || 1,
     directCosts,
     ggfItems,
@@ -699,6 +721,104 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     />
                   </div>
 
+                  {/* Especificações Físicas & Rateio por Kilograma */}
+                  <div className="p-4 bg-gradient-to-br from-emerald-50/70 to-slate-50 rounded-2xl border border-emerald-200/80 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-600 text-white rounded-lg shadow-xs">
+                        <Scale className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+                          Massa, Peso & Capacidade de Fábrica (Rateio por Kg)
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          Esses parâmetros permitem ratear GGF, custos indiretos e despesas fixas proporcionalmente ao peso do produto em kg.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Peso Líquido Unitário (kg) *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0.001"
+                            value={netWeightKg}
+                            onChange={(e) => setNetWeightKg(Math.max(0.001, parseFloat(e.target.value) || 0.001))}
+                            className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold text-slate-900"
+                            placeholder="1.000"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">
+                            kg/un
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Ex: 1 un = {netWeightKg >= 1 ? `${netWeightKg.toFixed(2)} kg` : `${(netWeightKg * 1000).toFixed(0)} gramas`}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Unidade de Medida Comercial
+                        </label>
+                        <select
+                          value={unitOfMeasure}
+                          onChange={(e) => setUnitOfMeasure(e.target.value)}
+                          className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium"
+                        >
+                          <option value="un">Unidade (un)</option>
+                          <option value="kg">Kilograma (kg)</option>
+                          <option value="pct">Pacote (pct)</option>
+                          <option value="cx">Caixa (cx)</option>
+                          <option value="lote">Lote (lote)</option>
+                          <option value="par">Par (par)</option>
+                          <option value="m">Metro (m)</option>
+                          <option value="m2">Metro Quadrado (m²)</option>
+                        </select>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Unidade exibida no catálogo e relatórios
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-1">
+                          Capacidade Mensal Fábrica (kg/mês)
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="10"
+                            min="1"
+                            value={factoryMonthlyKgCapacity}
+                            onChange={(e) => setFactoryMonthlyKgCapacity(Math.max(1, parseFloat(e.target.value) || 1))}
+                            className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono font-bold text-slate-900"
+                            placeholder="500"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">
+                            kg/mês
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Total de kg que a fábrica processa no mês
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 bg-white rounded-xl border border-emerald-100 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-600 font-medium flex items-center gap-1">
+                        <Scale className="w-3.5 h-3.5 text-emerald-600" />
+                        Demanda deste produto: <b className="text-slate-900 font-mono font-bold">{(targetSalesVolume * netWeightKg).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} kg/mês</b>
+                      </span>
+                      <span className="text-slate-500 text-[11px] font-mono">
+                        Representa <b className="text-emerald-700 font-bold">{((targetSalesVolume * netWeightKg / Math.max(1, factoryMonthlyKgCapacity)) * 100).toFixed(1)}%</b> da capacidade fabril ({factoryMonthlyKgCapacity} kg)
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Cash Flow Payment & Receipt Terms with Dynamic Average Calculation */}
                   <div className="p-4 bg-gradient-to-br from-indigo-50/80 to-slate-50 rounded-2xl border border-indigo-100/90 space-y-4">
                     <div className="flex items-center justify-between">
@@ -1016,85 +1136,171 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                         GGF - Gastos Gerais de Fabricação (Custos Indiretos)
                       </h3>
                       <p className="text-xs text-slate-500">
-                        Energia da fábrica, aluguel de espaço, depreciação de maquinário e manutenção
+                        Energia da fábrica, aluguel de espaço, depreciação de maquinário e manutenção rateados por kilograma ou unidade
                       </p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-500">Total GGF Unitário: </span>
-                      <span className="text-sm font-extrabold text-purple-700 font-mono">
-                        {formatCurrencyBRL(calc.totalGgfUnitCost)}
-                      </span>
+                    <div className="text-right flex items-center gap-3">
+                      <div className="bg-purple-50 px-3 py-1.5 rounded-xl border border-purple-200 text-right">
+                        <span className="text-[10px] uppercase font-bold text-purple-600 block">Total GGF</span>
+                        <span className="text-sm font-extrabold text-purple-900 font-mono">
+                          {formatCurrencyBRL(calc.totalGgfUnitCost)} <span className="text-[11px] font-normal text-purple-700">/un</span>
+                        </span>
+                        <span className="text-xs font-bold text-purple-700 font-mono ml-2 border-l border-purple-200 pl-2">
+                          {formatCurrencyBRL(calc.ggfPerKg)} <span className="text-[11px] font-normal text-purple-700">/kg</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 text-xs text-purple-950 flex items-start gap-2">
-                    <Info className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
-                    <span>
-                      <b>O que é GGF?</b> São os custos indispensáveis para a fabricação que não podem ser medidos diretamente em uma única unidade de forma óbvia (ex: energia que move os tornos/fornos, lubrificação, aluguel do galpão de produção, desgaste das máquinas).
-                    </span>
+                  <div className="p-3 bg-purple-50/70 rounded-xl border border-purple-200 text-xs text-purple-950 flex items-start gap-2.5">
+                    <Scale className="w-4 h-4 text-purple-600 shrink-0 mt-0.5" />
+                    <div>
+                      <b>⚖️ Rateio por Kilograma (GGF por Kg):</b> Os custos indiretos mensais podem ser distribuídos pelo peso total processado pela fábrica ({factoryMonthlyKgCapacity} kg/mês). O produto atual pesa <b>{netWeightKg} kg</b>, recebendo sua fatia proporcional exata.
+                    </div>
                   </div>
 
                   {/* GGF Items List */}
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     {ggfItems.map((item) => (
                       <div
                         key={item.id}
-                        className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 text-xs"
+                        className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col gap-2 text-xs hover:border-purple-300 transition-colors"
                       >
-                        <div className="flex-1 min-w-[140px]">
-                          <input
-                            type="text"
-                            value={item.name}
-                            onChange={(e) => handleUpdateGgf(item.id, 'name', e.target.value)}
-                            placeholder="Ex: Energia Elétrica Industrial"
-                            className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-900"
-                          />
-                        </div>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <div className="flex-1 min-w-[140px]">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Descrição do Gasto</label>
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) => handleUpdateGgf(item.id, 'name', e.target.value)}
+                              placeholder="Ex: Energia Elétrica Industrial"
+                              className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg font-medium text-slate-900"
+                            />
+                          </div>
 
-                        <div className="w-44">
-                          <select
-                            value={item.allocationType}
-                            onChange={(e) => handleUpdateGgf(item.id, 'allocationType', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-700"
+                          <div className="w-full sm:w-56">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Critério de Rateio</label>
+                            <select
+                              value={item.allocationType}
+                              onChange={(e) => handleUpdateGgf(item.id, 'allocationType', e.target.value)}
+                              className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-800 font-semibold"
+                            >
+                              <option value="rate_per_kg">⚖️ Rateio por Kg (R$ Mês ÷ Total Kg)</option>
+                              <option value="fixed_per_kg">⚖️ R$ Fixo por Kilograma (R$/kg)</option>
+                              <option value="fixed_per_unit">📦 R$ Fixo por Unidade (R$/un)</option>
+                              <option value="percentage_direct_cost">📊 % do Custo Direto</option>
+                              <option value="fixed_monthly_rate">🏢 R$ Total Mês ÷ Volume Unidades</option>
+                            </select>
+                          </div>
+
+                          <div className="w-full sm:w-28">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">
+                              {item.allocationType === 'percentage_direct_cost' ? 'Percentual (%)' : 'Valor Base (R$)'}
+                            </label>
+                            <input
+                              type="number"
+                              step="any"
+                              min="0"
+                              value={item.value}
+                              onChange={(e) => handleUpdateGgf(item.id, 'value', parseFloat(e.target.value) || 0)}
+                              placeholder={item.allocationType === 'percentage_direct_cost' ? '%' : 'R$'}
+                              className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg font-mono text-right font-bold text-slate-900"
+                            />
+                          </div>
+
+                          <div className="w-full sm:w-36 text-right font-mono">
+                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-0.5">Custo Rateado</label>
+                            {item.allocationType === 'rate_per_kg' && (
+                              <div>
+                                <span className="text-purple-900 font-black text-sm block">
+                                  {formatCurrencyBRL((item.value / Math.max(1, factoryMonthlyKgCapacity)) * netWeightKg)} / un
+                                </span>
+                                <span className="text-[11px] text-purple-700 font-bold block">
+                                  {formatCurrencyBRL(item.value / Math.max(1, factoryMonthlyKgCapacity))} / kg
+                                </span>
+                              </div>
+                            )}
+                            {item.allocationType === 'fixed_per_kg' && (
+                              <div>
+                                <span className="text-purple-900 font-black text-sm block">
+                                  {formatCurrencyBRL(item.value * netWeightKg)} / un
+                                </span>
+                                <span className="text-[11px] text-purple-700 font-bold block">
+                                  {formatCurrencyBRL(item.value)} / kg
+                                </span>
+                              </div>
+                            )}
+                            {item.allocationType === 'percentage_direct_cost' && (
+                              <div>
+                                <span className="text-purple-900 font-black text-sm block">
+                                  {formatCurrencyBRL(calc.totalDirectCosts * (item.value / 100))} / un
+                                </span>
+                                <span className="text-[11px] text-purple-700 font-bold block">
+                                  {formatCurrencyBRL((calc.totalDirectCosts * (item.value / 100)) / Math.max(0.001, netWeightKg))} / kg
+                                </span>
+                              </div>
+                            )}
+                            {item.allocationType === 'fixed_monthly_rate' && (
+                              <div>
+                                <span className="text-purple-900 font-black text-sm block">
+                                  {formatCurrencyBRL(item.value / Math.max(1, targetSalesVolume))} / un
+                                </span>
+                                <span className="text-[11px] text-purple-700 font-bold block">
+                                  {formatCurrencyBRL((item.value / Math.max(1, targetSalesVolume)) / Math.max(0.001, netWeightKg))} / kg
+                                </span>
+                              </div>
+                            )}
+                            {item.allocationType === 'fixed_per_unit' && (
+                              <div>
+                                <span className="text-purple-900 font-black text-sm block">
+                                  {formatCurrencyBRL(item.value)} / un
+                                </span>
+                                <span className="text-[11px] text-purple-700 font-bold block">
+                                  {formatCurrencyBRL(item.value / Math.max(0.001, netWeightKg))} / kg
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveGgf(item.id)}
+                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors self-end sm:self-center"
+                            title="Remover GGF"
                           >
-                            <option value="fixed_per_unit">R$ Fixo por unidade</option>
-                            <option value="percentage_direct_cost">% do Custo Direto</option>
-                            <option value="fixed_monthly_rate">R$ Total Mês / Volume</option>
-                          </select>
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
 
-                        <div className="w-24">
-                          <input
-                            type="number"
-                            step="any"
-                            min="0"
-                            value={item.value}
-                            onChange={(e) => handleUpdateGgf(item.id, 'value', parseFloat(e.target.value) || 0)}
-                            placeholder={item.allocationType === 'percentage_direct_cost' ? '%' : 'R$'}
-                            className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg font-mono text-right font-semibold"
-                          />
-                        </div>
-
-                        <div className="w-28 text-right font-mono text-purple-700 font-bold">
+                        {/* Calculation trace explanation */}
+                        <div className="pt-1.5 border-t border-slate-200/60 text-[11px] text-slate-500 font-mono flex items-center gap-1.5 flex-wrap">
+                          <span className="font-sans font-semibold text-slate-700">Fórmula:</span>
+                          {item.allocationType === 'rate_per_kg' && (
+                            <span>
+                              (R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ÷ {factoryMonthlyKgCapacity} kg) = <b className="text-purple-700">{formatCurrencyBRL(item.value / Math.max(1, factoryMonthlyKgCapacity))}/kg</b> × {netWeightKg} kg = <b className="text-purple-900">{formatCurrencyBRL((item.value / Math.max(1, factoryMonthlyKgCapacity)) * netWeightKg)}/un</b>
+                            </span>
+                          )}
+                          {item.allocationType === 'fixed_per_kg' && (
+                            <span>
+                              {formatCurrencyBRL(item.value)}/kg × {netWeightKg} kg = <b className="text-purple-900">{formatCurrencyBRL(item.value * netWeightKg)}/un</b>
+                            </span>
+                          )}
                           {item.allocationType === 'percentage_direct_cost' && (
-                            <span>{formatCurrencyBRL(calc.totalDirectCosts * (item.value / 100))}</span>
+                            <span>
+                              {item.value}% sobre custos diretos ({formatCurrencyBRL(calc.totalDirectCosts)}) = <b className="text-purple-900">{formatCurrencyBRL(calc.totalDirectCosts * (item.value / 100))}/un</b>
+                            </span>
                           )}
                           {item.allocationType === 'fixed_monthly_rate' && (
-                            <span>{formatCurrencyBRL(item.value / Math.max(1, targetSalesVolume))}</span>
+                            <span>
+                              R$ {item.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ÷ {targetSalesVolume} un = <b className="text-purple-900">{formatCurrencyBRL(item.value / Math.max(1, targetSalesVolume))}/un</b>
+                            </span>
                           )}
                           {item.allocationType === 'fixed_per_unit' && (
-                            <span>{formatCurrencyBRL(item.value)}</span>
+                            <span>
+                              {formatCurrencyBRL(item.value)} fixo por unidade
+                            </span>
                           )}
                         </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveGgf(item.id)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Remover GGF"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     ))}
                   </div>
@@ -1102,10 +1308,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <button
                     type="button"
                     onClick={handleAddGgf}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors border border-purple-200 cursor-pointer"
                   >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>+ Adicionar Item de GGF</span>
+                    <Plus className="w-4 h-4" />
+                    <span>+ Adicionar Item de GGF (Rateio por Kg / Unidade)</span>
                   </button>
                 </div>
               )}
@@ -1115,21 +1321,80 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Despesas Operacionais e Administrativas Fixas</h3>
+                      <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-indigo-600" />
+                        Despesas Operacionais e Administrativas Fixas
+                      </h3>
                       <p className="text-xs text-slate-500">
-                        Rateio dos custos fixos da empresa (administrativo, softwares, contabilidade, aluguel comercial)
+                        Rateio dos custos fixos da empresa (administrativo, softwares, contabilidade, comercial) por kg ou unidades
                       </p>
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-500">Rateio Unitário: </span>
-                      <span className="text-sm font-extrabold text-slate-900 font-mono">
-                        {formatCurrencyBRL(calc.totalFixedExpensesUnit)}
-                      </span>
+                    <div className="text-right flex items-center gap-2">
+                      <div className="bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-right">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">Rateio Fixo</span>
+                        <span className="text-sm font-extrabold text-slate-950 font-mono">
+                          {formatCurrencyBRL(calc.totalFixedExpensesUnit)} <span className="text-[11px] font-normal text-slate-600">/un</span>
+                        </span>
+                        <span className="text-xs font-bold text-indigo-700 font-mono ml-2 border-l border-slate-300 pl-2">
+                          {formatCurrencyBRL(calc.fixedExpensePerKg)} <span className="text-[11px] font-normal text-indigo-600">/kg</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Choice of Allocation Basis */}
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
+                        Critério de Rateio das Despesas Fixas:
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setFixedExpenseAllocation({
+                            ...fixedExpenseAllocation,
+                            allocationBasis: 'kg',
+                            estimatedMonthlyKgVolume: fixedExpenseAllocation.estimatedMonthlyKgVolume || factoryMonthlyKgCapacity,
+                          })}
+                          className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
+                            (fixedExpenseAllocation.allocationBasis || 'kg') === 'kg'
+                              ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20 text-emerald-950'
+                              : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <Scale className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-bold text-xs">Rateio por Kilograma (kg)</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              Distribui as despesas fixas pelo peso em kg processado. Ideal para indústrias e manufaturas.
+                            </div>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFixedExpenseAllocation({
+                            ...fixedExpenseAllocation,
+                            allocationBasis: 'units',
+                          })}
+                          className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 cursor-pointer ${
+                            fixedExpenseAllocation.allocationBasis === 'units'
+                              ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-500/20 text-blue-950'
+                              : 'bg-white border-slate-200 hover:border-slate-300 text-slate-700'
+                          }`}
+                        >
+                          <Package className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                          <div>
+                            <div className="font-bold text-xs">Rateio por Quantidade (unidades)</div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                              Distribui as despesas fixas igualmente por cada unidade produzida, sem considerar peso.
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-200">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 mb-1">
                           Total de Despesas Fixas Mensais da Empresa (R$)
@@ -1150,37 +1415,78 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           />
                         </div>
                         <p className="text-[11px] text-slate-400 mt-1">
-                          Ex: Pró-labore fixo, contador, internet, limpeza, taxas bancárias.
+                          Ex: Pró-labore, contador, internet, limpeza, softwares, taxas.
                         </p>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1">
-                          Volume Global Mensal de Produtos (unidades)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={fixedExpenseAllocation.estimatedMonthlyVolume}
-                          onChange={(e) => setFixedExpenseAllocation({
-                            ...fixedExpenseAllocation,
-                            estimatedMonthlyVolume: Math.max(1, parseInt(e.target.value) || 1),
-                          })}
-                          className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-mono font-bold text-slate-900"
-                        />
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          Capacidade total de vendas somando todos os produtos do negócio.
-                        </p>
-                      </div>
+                      {(fixedExpenseAllocation.allocationBasis || 'kg') === 'kg' ? (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Capacidade / Volume Mensal em Kilogramas (kg/mês)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="1"
+                              value={fixedExpenseAllocation.estimatedMonthlyKgVolume || factoryMonthlyKgCapacity}
+                              onChange={(e) => setFixedExpenseAllocation({
+                                ...fixedExpenseAllocation,
+                                estimatedMonthlyKgVolume: Math.max(1, parseFloat(e.target.value) || 1),
+                              })}
+                              className="w-full pr-14 pl-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-mono font-bold text-slate-900"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">
+                              kg/mês
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Massa total estimada processada pela empresa no mês.
+                          </p>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-700 mb-1">
+                            Volume Global Mensal de Produtos (unidades/mês)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="1"
+                              value={fixedExpenseAllocation.estimatedMonthlyVolume}
+                              onChange={(e) => setFixedExpenseAllocation({
+                                ...fixedExpenseAllocation,
+                                estimatedMonthlyVolume: Math.max(1, parseInt(e.target.value) || 1),
+                              })}
+                              className="w-full pr-14 pl-3 py-2 text-xs bg-white border border-slate-200 rounded-xl font-mono font-bold text-slate-900"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-bold">
+                              un/mês
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Capacidade total de vendas somando todos os produtos.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs text-emerald-950">
-                      <span>Custo Fixo Rateado por este Produto:</span>
-                      <span className="font-mono font-extrabold text-emerald-700 text-sm">
-                        {formatCurrencyBRL(
-                          fixedExpenseAllocation.monthlyFixedExpenses / Math.max(1, fixedExpenseAllocation.estimatedMonthlyVolume)
-                        )} / unidade
-                      </span>
+                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex flex-wrap items-center justify-between gap-2 text-xs text-emerald-950">
+                      <div>
+                        <span className="font-semibold">Custo Fixo Rateado para este Produto:</span>
+                        <div className="text-[11px] text-emerald-800 font-mono mt-0.5">
+                          {(fixedExpenseAllocation.allocationBasis || 'kg') === 'kg'
+                            ? `(R$ ${fixedExpenseAllocation.monthlyFixedExpenses} ÷ ${(fixedExpenseAllocation.estimatedMonthlyKgVolume || factoryMonthlyKgCapacity)} kg) = ${formatCurrencyBRL(calc.fixedExpensePerKg)}/kg × ${netWeightKg} kg`
+                            : `R$ ${fixedExpenseAllocation.monthlyFixedExpenses} ÷ ${fixedExpenseAllocation.estimatedMonthlyVolume} un = ${formatCurrencyBRL(calc.totalFixedExpensesUnit)}/un`}
+                        </div>
+                      </div>
+                      <div className="text-right font-mono">
+                        <span className="font-black text-emerald-900 text-base block">
+                          {formatCurrencyBRL(calc.totalFixedExpensesUnit)} <span className="text-xs font-normal">/unidade</span>
+                        </span>
+                        <span className="font-bold text-emerald-700 text-xs block">
+                          {formatCurrencyBRL(calc.fixedExpensePerKg)} <span className="text-[10px] font-normal">/kilograma</span>
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1726,95 +2032,165 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </span>
                 </div>
 
-                <div className="text-3xl font-black text-slate-900 font-mono tracking-tight flex items-baseline gap-2">
-                  <span>{formatCurrencyBRL(calc.effectiveSalePrice)}</span>
-                  <span className="text-xs font-normal text-slate-400 font-sans">/ unidade</span>
+                <div className="flex items-baseline justify-between flex-wrap gap-2">
+                  <div className="text-3xl font-black text-slate-900 font-mono tracking-tight flex items-baseline gap-1.5">
+                    <span>{formatCurrencyBRL(calc.effectiveSalePrice)}</span>
+                    <span className="text-xs font-normal text-slate-400 font-sans">/ unidade</span>
+                  </div>
+
+                  <div className="bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-right">
+                    <span className="text-[10px] uppercase font-bold text-emerald-700 block">Preço por Kg</span>
+                    <span className="text-sm font-black text-emerald-950 font-mono">
+                      {formatCurrencyBRL(calc.effectiveSalePricePerKg)} <span className="text-[10px] font-normal text-emerald-700">/kg</span>
+                    </span>
+                  </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between text-xs pt-2 border-t border-slate-100">
-                  <span className="text-slate-500">Lucro Líquido por Venda:</span>
-                  <span className="font-mono font-extrabold text-emerald-600">
-                    +{formatCurrencyBRL(calc.netProfitAmount)}
-                  </span>
+                {/* Weight and Profit per kg summary */}
+                <div className="mt-2.5 grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-100">
+                  <div className="flex flex-col">
+                    <span className="text-[11px] text-slate-500">Lucro Líquido / un:</span>
+                    <span className="font-mono font-black text-emerald-600 text-sm">
+                      +{formatCurrencyBRL(calc.netProfitAmount)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col text-right">
+                    <span className="text-[11px] text-slate-500">Lucro Líquido / kg:</span>
+                    <span className="font-mono font-black text-emerald-700 text-sm">
+                      +{formatCurrencyBRL(calc.netProfitPerKg)} <span className="text-[10px] font-normal text-slate-500">/kg</span>
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Composição Unitária Passo a Passo */}
+              {/* Composição Unitária & por Kg Passo a Passo */}
               <div className="mt-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
-                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-                  <span>Composição do Preço de Venda</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Memória de Cálculo</span>
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Composição do Preço & Custos
+                  </h4>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 font-mono">
+                    <span className="w-16 text-right">R$/un</span>
+                    <span className="w-16 text-right text-purple-700">R$/kg</span>
+                  </div>
+                </div>
 
                 <div className="text-xs divide-y divide-slate-100 font-mono">
-                  <div className="py-1.5 flex justify-between font-bold text-slate-900">
-                    <span>(+) Faturamento Bruto</span>
-                    <span>{formatCurrencyBRL(calc.effectiveSalePrice)}</span>
+                  <div className="py-1.5 flex justify-between items-center font-bold text-slate-900">
+                    <span className="font-sans">Faturamento Bruto</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">{formatCurrencyBRL(calc.effectiveSalePrice)}</span>
+                      <span className="w-16 text-right text-slate-700">{formatCurrencyBRL(calc.effectiveSalePricePerKg)}</span>
+                    </div>
                   </div>
 
-                  <div className="py-1.5 flex justify-between text-rose-600">
-                    <span>(-) Impostos s/ Vendas ({formatPercent(calc.totalTaxRate)})</span>
-                    <span>-{formatCurrencyBRL(calc.taxesAmount)}</span>
+                  <div className="py-1.5 flex justify-between items-center text-rose-600">
+                    <span className="font-sans text-[11px]">(-) Impostos s/ Vendas ({formatPercent(calc.totalTaxRate)})</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.taxesAmount)}</span>
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.taxesAmount / Math.max(0.001, netWeightKg))}</span>
+                    </div>
                   </div>
 
-                  <div className="py-1.5 flex justify-between font-semibold text-slate-800 bg-slate-50/60 px-1 rounded">
-                    <span>(=) Receita Operacional Líquida</span>
-                    <span>{formatCurrencyBRL(calc.netRevenue)}</span>
+                  <div className="py-1.5 flex justify-between items-center font-semibold text-slate-800 bg-slate-50/60 px-1 rounded">
+                    <span className="font-sans">(=) Receita Líquida</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">{formatCurrencyBRL(calc.netRevenue)}</span>
+                      <span className="w-16 text-right">{formatCurrencyBRL(calc.netRevenue / Math.max(0.001, netWeightKg))}</span>
+                    </div>
                   </div>
 
-                  <div className="py-1.5 flex justify-between text-blue-700">
-                    <span>(-) Custos Diretos (Insumos/MO)</span>
-                    <span>-{formatCurrencyBRL(calc.totalDirectCosts)}</span>
+                  <div className="py-1.5 flex justify-between items-center text-blue-700">
+                    <span className="font-sans text-[11px]">(-) Custos Diretos (Insumos/MO)</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.totalDirectCosts)}</span>
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.directCostsPerKg)}</span>
+                    </div>
                   </div>
 
                   {calc.rawMaterialTaxCreditsAmount > 0 && (
-                    <div className="py-1 flex justify-between text-emerald-700 bg-emerald-50/50 px-1 rounded text-[11px]">
-                      <span>(+) Créditos Fiscais Entrada (PIS/COFINS/ICMS)</span>
-                      <span>+{formatCurrencyBRL(calc.rawMaterialTaxCreditsAmount)}</span>
+                    <div className="py-1 flex justify-between items-center text-emerald-700 bg-emerald-50/50 px-1 rounded text-[11px]">
+                      <span className="font-sans">(+) Créditos Entrada (PIS/COFINS/ICMS)</span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-16 text-right">+{formatCurrencyBRL(calc.rawMaterialTaxCreditsAmount)}</span>
+                        <span className="w-16 text-right">+{formatCurrencyBRL(calc.rawMaterialTaxCreditsAmount / Math.max(0.001, netWeightKg))}</span>
+                      </div>
                     </div>
                   )}
 
-                  <div className="py-1.5 flex justify-between text-purple-700">
-                    <span>(-) GGF (Gastos Gerais Indiretos)</span>
-                    <span>-{formatCurrencyBRL(calc.totalGgfUnitCost)}</span>
+                  <div className="py-1.5 flex justify-between items-center text-purple-700">
+                    <span className="font-sans text-[11px]">(-) GGF (Custos Indiretos)</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.totalGgfUnitCost)}</span>
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.ggfPerKg)}</span>
+                    </div>
                   </div>
 
-                  <div className="py-1.5 flex justify-between text-amber-700">
-                    <span>(-) Despesas Variáveis (Comissões/Taxas)</span>
-                    <span>-{formatCurrencyBRL(calc.variableExpensesAmount)}</span>
+                  <div className="py-1.5 flex justify-between items-center text-amber-700">
+                    <span className="font-sans text-[11px]">(-) Despesas Comerciais & Variáveis</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.variableExpensesAmount)}</span>
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.variableExpensesAmount / Math.max(0.001, netWeightKg))}</span>
+                    </div>
                   </div>
 
-                  <div className="py-1.5 flex justify-between font-bold text-indigo-900 bg-indigo-50/50 px-1 rounded">
-                    <span>(=) Margem de Contribuição ({formatPercent(calc.contributionMarginRate)})</span>
-                    <span>{formatCurrencyBRL(calc.contributionMarginAmount)}</span>
+                  <div className="py-1.5 flex justify-between items-center font-bold text-indigo-900 bg-indigo-50/50 px-1 rounded">
+                    <span className="font-sans">(=) Margem de Contribuição ({formatPercent(calc.contributionMarginRate)})</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">{formatCurrencyBRL(calc.contributionMarginAmount)}</span>
+                      <span className="w-16 text-right">{formatCurrencyBRL(calc.contributionMarginAmount / Math.max(0.001, netWeightKg))}</span>
+                    </div>
                   </div>
 
-                  <div className="py-1.5 flex justify-between text-slate-600">
-                    <span>(-) Despesas Fixas Rateadas</span>
-                    <span>-{formatCurrencyBRL(calc.totalFixedExpensesUnit)}</span>
+                  <div className="py-1.5 flex justify-between items-center text-slate-600">
+                    <span className="font-sans text-[11px]">(-) Despesas Fixas Rateadas</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.totalFixedExpensesUnit)}</span>
+                      <span className="w-16 text-right">-{formatCurrencyBRL(calc.fixedExpensePerKg)}</span>
+                    </div>
+                  </div>
+
+                  <div className="py-1.5 flex justify-between items-center text-slate-900 bg-slate-100/80 px-1 rounded font-bold">
+                    <span className="font-sans text-[11px]">(=) Custo Total do Produto</span>
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-right">{formatCurrencyBRL(calc.totalUnitCost)}</span>
+                      <span className="w-16 text-right text-indigo-950 font-black">{formatCurrencyBRL(calc.totalCostPerKg)}</span>
+                    </div>
                   </div>
 
                   {taxSettings.regime === 'lucro_real' ? (
                     <>
-                      <div className="py-1.5 flex justify-between font-bold text-slate-800 bg-amber-50/60 px-1 rounded">
-                        <span>(=) LAIR (Lucro Antes do IRPJ/CSLL)</span>
-                        <span>{formatCurrencyBRL(calc.lairAmount)}</span>
+                      <div className="py-1.5 flex justify-between items-center font-bold text-slate-800 bg-amber-50/60 px-1 rounded">
+                        <span className="font-sans">(=) LAIR (Lucro Antes IRPJ/CSLL)</span>
+                        <div className="flex items-center gap-2">
+                          <span className="w-16 text-right">{formatCurrencyBRL(calc.lairAmount)}</span>
+                          <span className="w-16 text-right">{formatCurrencyBRL(calc.lairAmount / Math.max(0.001, netWeightKg))}</span>
+                        </div>
                       </div>
 
-                      <div className="py-1.5 flex justify-between text-rose-700">
-                        <span>(-) Provisão IRPJ & CSLL (34% Lucro Real)</span>
-                        <span>-{formatCurrencyBRL(calc.irpjCsllRealAmount)}</span>
+                      <div className="py-1.5 flex justify-between items-center text-rose-700">
+                        <span className="font-sans text-[11px]">(-) Provisão IRPJ & CSLL (34%)</span>
+                        <div className="flex items-center gap-2">
+                          <span className="w-16 text-right">-{formatCurrencyBRL(calc.irpjCsllRealAmount)}</span>
+                          <span className="w-16 text-right">-{formatCurrencyBRL(calc.irpjCsllRealAmount / Math.max(0.001, netWeightKg))}</span>
+                        </div>
                       </div>
 
-                      <div className="py-2 flex justify-between font-black text-sm text-emerald-700 bg-emerald-50 px-2 rounded-lg mt-1">
-                        <span>(=) Lucro Líquido Real Unitário</span>
-                        <span>{formatCurrencyBRL(calc.netProfitAmount)}</span>
+                      <div className="py-2 flex justify-between items-center font-black text-sm text-emerald-700 bg-emerald-50 px-2 rounded-lg mt-1">
+                        <span className="font-sans">(=) Lucro Líquido Real</span>
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="w-16 text-right">{formatCurrencyBRL(calc.netProfitAmount)}</span>
+                          <span className="w-16 text-right text-emerald-900">{formatCurrencyBRL(calc.netProfitPerKg)}</span>
+                        </div>
                       </div>
                     </>
                   ) : (
-                    <div className="py-2 flex justify-between font-black text-sm text-emerald-700 bg-emerald-50 px-2 rounded-lg mt-1">
-                      <span>(=) Lucro Líquido Unitário</span>
-                      <span>{formatCurrencyBRL(calc.netProfitAmount)}</span>
+                    <div className="py-2 flex justify-between items-center font-black text-sm text-emerald-700 bg-emerald-50 px-2 rounded-lg mt-1">
+                      <span className="font-sans">(=) Lucro Líquido</span>
+                      <div className="flex items-center gap-2 font-mono">
+                        <span className="w-16 text-right">{formatCurrencyBRL(calc.netProfitAmount)}</span>
+                        <span className="w-16 text-right text-emerald-900">{formatCurrencyBRL(calc.netProfitPerKg)}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1827,8 +2203,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   <div className="text-sm font-bold text-slate-900 font-mono mt-0.5">
                     {calc.breakEvenQuantity} <span className="text-[10px] font-normal text-slate-500">un/mês</span>
                   </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    {formatCurrencyBRL(calc.breakEvenRevenue)}
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    {calc.breakEvenKg} kg/mês ({formatCurrencyBRL(calc.breakEvenRevenue)})
                   </div>
                 </div>
 
@@ -1838,7 +2214,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     {formatPercent(calc.maximumDiscountRate)}
                   </div>
                   <div className="text-[10px] text-slate-400">
-                    antes de entrar no prejuízo
+                    antes de margem zero
                   </div>
                 </div>
               </div>
@@ -1857,7 +2233,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               <button
                 type="button"
                 onClick={handleSave}
-                className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors cursor-pointer"
               >
                 <Check className="w-4 h-4" />
                 <span>Salvar Precificação</span>
