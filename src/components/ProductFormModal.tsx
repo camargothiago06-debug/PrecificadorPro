@@ -475,8 +475,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setGgfItems(ggfItems.filter((item) => item.id !== id));
   };
 
+  // Profit margin change handler: ensures price updates immediately from the desired margin
+  const handleProfitMarginChange = (newMargin: number) => {
+    setDesiredProfitMargin(newMargin);
+    setPricingMethod('markup_divisor');
+    setManualSalePrice(undefined);
+  };
+
   // Quick preset templates for common Brazilian businesses
   const applyPresetTemplate = (type: 'artesanal' | 'confeitaria' | 'comercio' | 'textil') => {
+    setPricingMethod('markup_divisor');
+    setManualSalePrice(undefined);
     if (type === 'artesanal') {
       setCategory('Artesanato & Manufatura');
       setDesiredProfitMargin(25);
@@ -509,6 +518,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
     const finalProduct: ProductItem = {
       ...currentDraftProduct,
+      desiredProfitMargin: Number(desiredProfitMargin) || 0,
+      pricingMethod: pricingMethod === 'target_price' && manualSalePrice && manualSalePrice > 0 ? 'target_price' : 'markup_divisor',
+      manualSalePrice: pricingMethod === 'target_price' && manualSalePrice && manualSalePrice > 0 ? manualSalePrice : undefined,
       id: initialProduct?.id || `prod-${Date.now()}`,
       updatedAt: new Date().toISOString(),
     };
@@ -1922,7 +1934,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   {/* Pricing Method Selector */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div
-                      onClick={() => setPricingMethod('markup_divisor')}
+                      onClick={() => {
+                        setPricingMethod('markup_divisor');
+                        setManualSalePrice(undefined);
+                      }}
                       className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                         pricingMethod === 'markup_divisor'
                           ? 'bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-500/20'
@@ -1941,7 +1956,12 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     </div>
 
                     <div
-                      onClick={() => setPricingMethod('target_price')}
+                      onClick={() => {
+                        setPricingMethod('target_price');
+                        if (!manualSalePrice) {
+                          setManualSalePrice(calc.suggestedSalePrice);
+                        }
+                      }}
                       className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
                         pricingMethod === 'target_price'
                           ? 'bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-500/20'
@@ -1970,7 +1990,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           min="1"
                           max="80"
                           value={desiredProfitMargin}
-                          onChange={(e) => setDesiredProfitMargin(parseFloat(e.target.value) || 0)}
+                          onChange={(e) => handleProfitMarginChange(parseFloat(e.target.value) || 0)}
                           className="w-20 px-2 py-1 text-sm bg-white border border-slate-200 rounded-lg text-right font-mono font-bold text-emerald-700"
                         />
                         <span className="text-xs font-bold text-slate-600">%</span>
@@ -1983,7 +2003,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       max="60"
                       step="0.5"
                       value={desiredProfitMargin}
-                      onChange={(e) => setDesiredProfitMargin(parseFloat(e.target.value))}
+                      onChange={(e) => handleProfitMarginChange(parseFloat(e.target.value))}
                       className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                     />
 

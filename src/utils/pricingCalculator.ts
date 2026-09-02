@@ -230,9 +230,7 @@ export function calculateProductPricing(product: ProductItem): CalculationResult
   if (product.pricingMethod === 'markup_multiplier') {
     const markupMult = 1 + (desiredProfitRate / 100);
     effectiveSalePrice = Number((baseCostToCover * markupMult).toFixed(2));
-  } else if (product.pricingMethod === 'target_price' && product.manualSalePrice && product.manualSalePrice > 0) {
-    effectiveSalePrice = product.manualSalePrice;
-  } else if (product.manualSalePrice && product.manualSalePrice > 0) {
+  } else if (product.pricingMethod === 'target_price' && product.manualSalePrice !== undefined && product.manualSalePrice > 0) {
     effectiveSalePrice = product.manualSalePrice;
   }
 

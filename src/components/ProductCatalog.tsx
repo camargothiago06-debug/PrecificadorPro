@@ -27,6 +27,7 @@ interface ProductCatalogProps {
   onDuplicateProduct: (product: ProductItem) => void;
   onDeleteProduct: (id: string) => void;
   onUpdateManualPrice: (id: string, newPrice: number | undefined) => void;
+  onUpdateMargin?: (id: string, newMargin: number) => void;
   onExportCSV: () => void;
 }
 
@@ -37,6 +38,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
   onDuplicateProduct,
   onDeleteProduct,
   onUpdateManualPrice,
+  onUpdateMargin,
   onExportCSV,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -333,6 +335,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({
               onDuplicate={onDuplicateProduct}
               onDelete={onDeleteProduct}
               onUpdateManualPrice={onUpdateManualPrice}
+              onUpdateMargin={onUpdateMargin}
             />
           ))}
         </div>

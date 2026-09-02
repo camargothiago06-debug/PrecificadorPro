@@ -125,6 +125,30 @@ export default function App() {
           return {
             ...p,
             manualSalePrice: newPrice,
+            pricingMethod: newPrice !== undefined ? ('target_price' as const) : ('markup_divisor' as const),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return p;
+      });
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
+  const handleUpdateMargin = (id: string, newMargin: number) => {
+    setProducts((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === id) {
+          return {
+            ...p,
+            desiredProfitMargin: newMargin,
+            pricingMethod: 'markup_divisor' as const,
+            manualSalePrice: undefined,
             updatedAt: new Date().toISOString(),
           };
         }
@@ -243,6 +267,7 @@ export default function App() {
             onDuplicateProduct={handleDuplicateProduct}
             onDeleteProduct={handleDeleteProduct}
             onUpdateManualPrice={handleUpdateManualPrice}
+            onUpdateMargin={handleUpdateMargin}
             onExportCSV={() => exportProductsToCSV(products)}
           />
         )}
