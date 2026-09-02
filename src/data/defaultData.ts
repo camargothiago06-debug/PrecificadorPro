@@ -1,4 +1,4 @@
-import { ProductItem, AppSettings } from '../types';
+import { ProductItem, AppSettings, RegisteredProductItem } from '../types';
 
 export const initialAppSettings: AppSettings = {
   companyName: 'Indústria & Processamento Brasil',
@@ -214,3 +214,99 @@ export const defaultProducts: ProductItem[] = [
     updatedAt: new Date().toISOString(),
   },
 ];
+
+export const defaultRegisteredProducts: RegisteredProductItem[] = [
+  {
+    id: 'reg-prod-1',
+    code: 'POL-PP-VIRG',
+    name: 'Resina Polipropileno Virgem Homopolímero H-103',
+    category: 'Polímeros & Resinas',
+    unit: 'kg',
+    defaultWeightKg: 1.0,
+    totalPrice: 12.50,
+    taxRate: 18.0, // 18% ICMS
+    icmsRate: 18.0,
+    pisRate: 1.65,
+    cofinsRate: 7.60,
+    ipiRate: 5.0,
+    taxAmount: 2.25, // 12.50 * 18% = 2.25
+    netPrice: 10.25, // 12.50 - 2.25 = 10.25
+    description: 'Resina termoplástica virgem para extrusão e injeção de alta performance.',
+    supplier: 'Braskem Distribuição',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'reg-prod-2',
+    code: 'FIB-VID-MOID',
+    name: 'Fibra de Vidro Moída Especial 1/16"',
+    category: 'Cargas & Reforços',
+    unit: 'kg',
+    defaultWeightKg: 1.0,
+    totalPrice: 16.80,
+    taxRate: 12.0, // 12% Imposto interestadual
+    icmsRate: 12.0,
+    pisRate: 1.65,
+    cofinsRate: 7.60,
+    ipiRate: 3.25,
+    taxAmount: 2.016,
+    netPrice: 14.784,
+    description: 'Fibra picada de alta pureza para reforço de impacto mecânico.',
+    supplier: 'Owens Corning Brasil',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'reg-prod-3',
+    code: 'PIG-MB-BLK',
+    name: 'Masterbatch Preto Carbon Black Concentrado 40%',
+    category: 'Aditivos & Pigmentos',
+    unit: 'kg',
+    defaultWeightKg: 1.0,
+    totalPrice: 38.00,
+    taxRate: 20.0,
+    icmsRate: 18.0,
+    pisRate: 1.65,
+    cofinsRate: 7.60,
+    ipiRate: 5.0,
+    taxAmount: 7.60,
+    netPrice: 30.40,
+    description: 'Pigmento preto de alta dispersão com proteção UV.',
+    supplier: 'Cabot Química',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'reg-prod-4',
+    code: 'SOLV-CLEAN-01',
+    name: 'Solvente Industrial Desengraxante Biodegradável',
+    category: 'Químicos & Fluidos',
+    unit: 'l',
+    defaultWeightKg: 0.95,
+    totalPrice: 22.00,
+    taxRate: 15.0,
+    taxAmount: 3.30,
+    netPrice: 18.70,
+    description: 'Solvente atóxico para desengraxe de peças de usinagem e matrizes.',
+    supplier: 'Química Industrial Bandeirante',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'reg-prod-5',
+    code: 'EMB-RAF-25KG',
+    name: 'Saco Valvulado de Ráfia Laminada 25kg Personalizado',
+    category: 'Embalagens',
+    unit: 'un',
+    defaultWeightKg: 0.12,
+    totalPrice: 4.50,
+    taxRate: 9.25, // PIS/COFINS
+    taxAmount: 0.416,
+    netPrice: 4.084,
+    description: 'Embalagem resistente para grãos plásticos e compostos com válvula de enchimento.',
+    supplier: 'Embalagens São Paulo',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+];
+

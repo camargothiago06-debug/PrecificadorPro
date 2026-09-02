@@ -29,7 +29,8 @@ import {
   VariableExpenses, 
   FixedExpenseAllocation,
   TaxRegime,
-  PricingMethod
+  PricingMethod,
+  RegisteredProductItem
 } from '../types';
 import { 
   calculateProductPricing, 
@@ -48,6 +49,8 @@ interface ProductFormModalProps {
   onClose: () => void;
   onSave: (product: ProductItem) => void;
   initialProduct?: ProductItem | null;
+  registeredProducts?: RegisteredProductItem[];
+  preSelectedRegisteredProductId?: string | null;
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
@@ -55,10 +58,18 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onClose,
   onSave,
   initialProduct,
+  registeredProducts = [],
+  preSelectedRegisteredProductId = null,
 }) => {
   // Active Tab in Form
   const [activeFormTab, setActiveFormTab] = useState<'info' | 'direct' | 'ggf' | 'fixed' | 'taxes' | 'profit'>('direct');
   const [displayMetricBasis, setDisplayMetricBasis] = useState<'unit' | 'kg'>('unit');
+
+  // Registered product link state & picker
+  const [registeredProductId, setRegisteredProductId] = useState<string | undefined>(
+    initialProduct?.registeredProductId || preSelectedRegisteredProductId || undefined
+  );
+  const [showRegisteredInsumoPicker, setShowRegisteredInsumoPicker] = useState(false);
 
   // Form State
   const [code, setCode] = useState(initialProduct?.code || `PRD-${Math.floor(100 + Math.random() * 900)}`);
@@ -235,11 +246,101 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }
   );
 
+  // Function to apply a registered product's data into the pricing form
+  const applyRegisteredProduct = (regId: string) => {
+    const reg = (registeredProducts || []).find((p) => p.id === regId);
+    if (!reg) return;
+
+    setRegisteredProductId(reg.id);
+    setName(reg.name);
+    setCode(reg.code);
+    setCategory(reg.category);
+    setUnitOfMeasure(reg.unit || 'kg');
+    setNetWeightKg(reg.defaultWeightKg ?? 1.0);
+    if (reg.description) {
+      setDescription(reg.description);
+    }
+
+    // Direct Costs: configure or update the main raw material with the net price (deducted of tax)
+    const existingRawIdx = directCosts.findIndex((dc) => dc.category === 'raw_material');
+    if (existingRawIdx >= 0) {
+      const updated = [...directCosts];
+      updated[existingRawIdx] = {
+        ...updated[existingRawIdx],
+        name: reg.name,
+        unit: reg.unit,
+        unitCost: reg.netPrice,
+        totalCost: Number(((updated[existingRawIdx].quantity || 1) * reg.netPrice).toFixed(2)),
+        hasTaxCredit: true,
+      };
+      setDirectCosts(updated);
+    } else {
+      setDirectCosts([
+        {
+          id: `dc-${Date.now()}-reg`,
+          name: reg.name,
+          category: 'raw_material',
+          unit: reg.unit,
+          quantity: 1,
+          unitCost: reg.netPrice,
+          totalCost: reg.netPrice,
+          hasTaxCredit: true,
+        },
+        ...directCosts,
+      ]);
+    }
+
+    // Tax Settings: automatically propagate tax configuration
+    if (taxSettings.regime === 'simples_nacional') {
+      setTaxSettings((prev) => ({
+        ...prev,
+        simplesRate: reg.taxRate,
+        totalTaxRate: reg.taxRate,
+      }));
+    } else if (taxSettings.regime === 'lucro_real') {
+      setTaxSettings((prev) => ({
+        ...prev,
+        icms: reg.icmsRate ?? reg.taxRate,
+        pis: reg.pisRate ?? prev.pis,
+        cofins: reg.cofinsRate ?? prev.cofins,
+        ipi: reg.ipiRate ?? prev.ipi,
+        icmsCreditRate: reg.icmsRate ?? reg.taxRate,
+        customTaxRate: reg.taxRate,
+      }));
+    } else {
+      setTaxSettings((prev) => ({
+        ...prev,
+        customTaxRate: reg.taxRate,
+        totalTaxRate: reg.taxRate,
+      }));
+    }
+  };
+
+  const handleUnlinkRegisteredProduct = () => {
+    setRegisteredProductId(undefined);
+  };
+
+  const handleAddRegisteredInsumo = (reg: RegisteredProductItem) => {
+    const newItem: DirectCostItem = {
+      id: `dc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      name: `${reg.code} - ${reg.name}`,
+      category: 'raw_material',
+      unit: reg.unit,
+      quantity: 1,
+      unitCost: reg.netPrice,
+      totalCost: reg.netPrice,
+      hasTaxCredit: true,
+    };
+    setDirectCosts([...directCosts, newItem]);
+    setShowRegisteredInsumoPicker(false);
+  };
+
   // Synchronize internal form state whenever modal is opened or initialProduct changes
   useEffect(() => {
     if (!isOpen) return;
 
     if (initialProduct) {
+      setRegisteredProductId(initialProduct.registeredProductId);
       setCode(initialProduct.code || '');
       setName(initialProduct.name || '');
       setCategory(initialProduct.category || 'Manufatura / Produção');
@@ -309,7 +410,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setActiveFormTab('direct');
     } else {
       // Clean state for new product
-      setCode(`PRD-${Math.floor(100 + Math.random() * 900)}`);
+      const newCode = `PRD-${Math.floor(100 + Math.random() * 900)}`;
+      setCode(newCode);
       setName('');
       setCategory('Manufatura / Produção');
       setDescription('');
@@ -373,17 +475,25 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setPricingMethod('markup_divisor');
       setManualSalePrice(undefined);
       setActiveFormTab('info');
+
+      if (preSelectedRegisteredProductId) {
+        applyRegisteredProduct(preSelectedRegisteredProductId);
+      }
     }
-  }, [isOpen, initialProduct]);
+  }, [isOpen, initialProduct, preSelectedRegisteredProductId]);
 
   // Profit Strategy
   const [desiredProfitMargin, setDesiredProfitMargin] = useState<number>(initialProduct?.desiredProfitMargin ?? 22.0);
   const [pricingMethod, setPricingMethod] = useState<PricingMethod>(initialProduct?.pricingMethod || 'markup_divisor');
   const [manualSalePrice, setManualSalePrice] = useState<number | undefined>(initialProduct?.manualSalePrice);
 
+  // Selected registered product entity for live UI display
+  const selectedRegisteredProduct = (registeredProducts || []).find((p) => p.id === registeredProductId);
+
   // Temporary current product object for real-time calculation
   const currentDraftProduct: ProductItem = {
     id: initialProduct?.id || 'temp',
+    registeredProductId,
     code,
     name: name || 'Novo Produto em Precificação',
     category,
@@ -638,6 +748,98 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {/* TAB 1: Informações Gerais */}
               {activeFormTab === 'info' && (
                 <div className="space-y-4">
+                  {/* Master Registered Product Link / Auto-filler */}
+                  <div className="p-3.5 bg-gradient-to-r from-indigo-50 via-emerald-50/60 to-slate-50 rounded-2xl border border-indigo-200/80 shadow-2xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                          <Package className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 block leading-tight">
+                            Puxar Valores de Produto Cadastrado
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            Selecione um produto cadastrado para carregar valores, impostos e custos líquidos automaticamente
+                          </span>
+                        </div>
+                      </div>
+
+                      {selectedRegisteredProduct && (
+                        <button
+                          type="button"
+                          onClick={handleUnlinkRegisteredProduct}
+                          className="text-[11px] font-semibold text-rose-600 hover:text-rose-800 underline self-start sm:self-auto cursor-pointer"
+                        >
+                          Desvincular
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Selector Dropdown */}
+                    <div className="grid grid-cols-1 gap-2">
+                      <select
+                        value={registeredProductId || ''}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            applyRegisteredProduct(e.target.value);
+                          } else {
+                            handleUnlinkRegisteredProduct();
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-emerald-500 font-semibold text-slate-800 shadow-2xs"
+                      >
+                        <option value="">-- Selecione um produto da sua biblioteca de cadastrados --</option>
+                        {registeredProducts.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            [{p.code}] {p.name} | Total: {formatCurrencyBRL(p.totalPrice)} | Imposto: {formatPercent(p.taxRate)} | Líquido: {formatCurrencyBRL(p.netPrice)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Active Selected Product Info Banner */}
+                    {selectedRegisteredProduct && (
+                      <div className="p-3 bg-white rounded-xl border border-emerald-300/80 shadow-2xs space-y-2">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md">
+                              <Check className="w-3 h-3" />
+                              Produto Cadastrado Carregado
+                            </span>
+                            <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                              {selectedRegisteredProduct.code}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-medium">
+                            Categoria: <strong className="text-slate-700">{selectedRegisteredProduct.category}</strong>
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100 text-center">
+                          <div className="bg-slate-50 p-2 rounded-lg">
+                            <span className="text-[10px] text-slate-500 font-semibold block">Valor Total Bruto</span>
+                            <span className="text-xs font-mono font-black text-slate-900">
+                              {formatCurrencyBRL(selectedRegisteredProduct.totalPrice)}
+                            </span>
+                          </div>
+                          <div className="bg-rose-50 p-2 rounded-lg">
+                            <span className="text-[10px] text-rose-600 font-semibold block">Imposto ({formatPercent(selectedRegisteredProduct.taxRate)})</span>
+                            <span className="text-xs font-mono font-black text-rose-700">
+                              -{formatCurrencyBRL(selectedRegisteredProduct.taxAmount)}
+                            </span>
+                          </div>
+                          <div className="bg-emerald-50 p-2 rounded-lg border border-emerald-200">
+                            <span className="text-[10px] text-emerald-800 font-bold block">Preço Líquido (Insumo)</span>
+                            <span className="text-xs font-mono font-black text-emerald-700">
+                              {formatCurrencyBRL(selectedRegisteredProduct.netPrice)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-900">Identificação & Estimativa de Venda</h3>
                     <div className="flex items-center gap-1.5">
@@ -1111,16 +1313,27 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleAddDirectCost('raw_material')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>+ Matéria-prima / Insumo</span>
                     </button>
 
+                    {registeredProducts.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowRegisteredInsumoPicker(!showRegisteredInsumoPicker)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-colors border border-emerald-300 cursor-pointer shadow-2xs"
+                      >
+                        <Package className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>+ Puxar de Produtos Cadastrados ({registeredProducts.length})</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => handleAddDirectCost('packaging')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors border border-amber-200 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       <span>+ Embalagem</span>
@@ -1129,12 +1342,52 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleAddDirectCost('direct_labor')}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200 cursor-pointer"
                     >
                       <Clock className="w-3.5 h-3.5" />
                       <span>+ Mão de Obra Direta</span>
                     </button>
                   </div>
+
+                  {/* Registered Products Insumo Quick Picker */}
+                  {showRegisteredInsumoPicker && (
+                    <div className="p-3.5 bg-emerald-50/90 rounded-xl border border-emerald-300 shadow-sm space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                          <Package className="w-4 h-4 text-emerald-700" />
+                          Clique em um produto cadastrado para adicionar aos custos com o Preço Líquido:
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowRegisteredInsumoPicker(false)}
+                          className="text-[11px] text-slate-500 hover:text-slate-800 font-bold"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {registeredProducts.map((reg) => (
+                          <div
+                            key={reg.id}
+                            onClick={() => handleAddRegisteredInsumo(reg)}
+                            className="p-2 bg-white rounded-lg border border-emerald-200 hover:border-emerald-500 hover:bg-emerald-50/50 cursor-pointer transition-all flex items-center justify-between gap-2 text-xs"
+                          >
+                            <div className="min-w-0">
+                              <div className="font-mono font-bold text-[10px] text-indigo-700">{reg.code}</div>
+                              <div className="font-semibold text-slate-900 truncate text-[11px]">{reg.name}</div>
+                              <div className="text-[10px] text-slate-500">{reg.category}</div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-[10px] text-slate-400">Líquido:</div>
+                              <div className="font-mono font-black text-emerald-700">{formatCurrencyBRL(reg.netPrice)}</div>
+                              <div className="text-[9px] text-slate-400">/{reg.unit}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

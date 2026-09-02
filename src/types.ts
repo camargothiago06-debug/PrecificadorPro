@@ -174,8 +174,36 @@ export interface CalculationResult {
   maximumDiscountRate: number; // % máximo de desconto antes do prejuízo
 }
 
+export interface RegisteredProductItem {
+  id: string;
+  code: string; // SKU / Código / NCM
+  name: string; // Nome do Produto
+  category: string; // Categoria (ex: Polímeros, Alimentício, Metalmecânica, Embalagens, etc.)
+  unit: string; // Unidade de medida (kg, un, l, pct, m, etc.)
+  defaultWeightKg?: number; // Peso líquido unitário em kg (padrão: 1.0)
+  
+  totalPrice: number; // Valor Total Bruto do Produto (R$)
+  taxRate: number; // Alíquota do Imposto Total (%) aplicada ao produto
+  
+  // Detalhamento opcional de impostos
+  icmsRate?: number;
+  pisRate?: number;
+  cofinsRate?: number;
+  ipiRate?: number;
+  otherTaxRate?: number;
+  
+  taxAmount: number; // Valor do Imposto em R$ (totalPrice * taxRate / 100)
+  netPrice: number; // Preço Líquido do Produto em R$ (totalPrice - taxAmount)
+  
+  description?: string;
+  supplier?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ProductItem {
   id: string;
+  registeredProductId?: string; // ID do produto base cadastrado de origem (se houver)
   code: string;
   name: string;
   category: string;

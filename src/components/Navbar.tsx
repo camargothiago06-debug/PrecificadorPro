@@ -8,25 +8,30 @@ import {
   BookOpen, 
   Download,
   HelpCircle,
-  Layers
+  Layers,
+  Package
 } from 'lucide-react';
 
 interface NavbarProps {
-  activeTab: 'catalog' | 'cashflow';
-  setActiveTab: (tab: 'catalog' | 'cashflow') => void;
+  activeTab: 'catalog' | 'registered' | 'cashflow';
+  setActiveTab: (tab: 'catalog' | 'registered' | 'cashflow') => void;
   onNewProduct: () => void;
+  onNewRegisteredProduct?: () => void;
   onOpenGuide: () => void;
   onExportCSV: () => void;
   productCount: number;
+  registeredProductCount: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   onNewProduct,
+  onNewRegisteredProduct,
   onOpenGuide,
   onExportCSV,
   productCount,
+  registeredProductCount,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200/80 shadow-xs">
@@ -55,30 +60,46 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               id="tab-catalog-btn"
               onClick={() => setActiveTab('catalog')}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
                 activeTab === 'catalog'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
               <Layers className="w-4.5 h-4.5 text-emerald-600" />
-              <span>Produtos & Preços</span>
-              <span className="ml-1 bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-extrabold">
+              <span>Formação de Preço</span>
+              <span className="ml-1 bg-emerald-100 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-extrabold">
                 {productCount}
+              </span>
+            </button>
+
+            <button
+              id="tab-registered-btn"
+              onClick={() => setActiveTab('registered')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+                activeTab === 'registered'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <Package className="w-4.5 h-4.5 text-indigo-600" />
+              <span>Cadastro de Produtos</span>
+              <span className="ml-1 bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-extrabold">
+                {registeredProductCount}
               </span>
             </button>
 
             <button
               id="tab-cashflow-btn"
               onClick={() => setActiveTab('cashflow')}
-              className={`flex items-center gap-2.5 px-4 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${
                 activeTab === 'cashflow'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <TrendingUp className="w-4.5 h-4.5 text-indigo-600" />
-              <span>Fluxo de Caixa Previsto</span>
+              <TrendingUp className="w-4.5 h-4.5 text-purple-600" />
+              <span>Fluxo de Caixa</span>
             </button>
           </nav>
 
@@ -104,14 +125,25 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span>Exportar</span>
             </button>
 
-            <button
-              id="new-product-header-btn"
-              onClick={onNewProduct}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors cursor-pointer"
-            >
-              <Plus className="w-4.5 h-4.5" />
-              <span>Novo Produto</span>
-            </button>
+            {activeTab === 'registered' ? (
+              <button
+                id="new-registered-product-header-btn"
+                onClick={onNewRegisteredProduct || onNewProduct}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                <Plus className="w-4.5 h-4.5" />
+                <span>Cadastrar Produto</span>
+              </button>
+            ) : (
+              <button
+                id="new-product-header-btn"
+                onClick={onNewProduct}
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                <Plus className="w-4.5 h-4.5" />
+                <span>Novo Preço</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -119,21 +151,30 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex md:hidden items-center justify-around border-t border-slate-100 py-2.5">
           <button
             onClick={() => setActiveTab('catalog')}
-            className={`flex flex-col items-center gap-1 text-xs font-semibold py-1.5 px-3 rounded-lg ${
+            className={`flex flex-col items-center gap-1 text-xs font-semibold py-1.5 px-2.5 rounded-lg ${
               activeTab === 'catalog' ? 'text-emerald-700 font-bold bg-emerald-50' : 'text-slate-600'
             }`}
           >
             <Layers className="w-4.5 h-4.5" />
-            <span>Produtos ({productCount})</span>
+            <span>Precificação ({productCount})</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('registered')}
+            className={`flex flex-col items-center gap-1 text-xs font-semibold py-1.5 px-2.5 rounded-lg ${
+              activeTab === 'registered' ? 'text-indigo-700 font-bold bg-indigo-50' : 'text-slate-600'
+            }`}
+          >
+            <Package className="w-4.5 h-4.5" />
+            <span>Cadastro ({registeredProductCount})</span>
           </button>
           <button
             onClick={() => setActiveTab('cashflow')}
-            className={`flex flex-col items-center gap-1 text-xs font-semibold py-1.5 px-3 rounded-lg ${
-              activeTab === 'cashflow' ? 'text-indigo-700 font-bold bg-indigo-50' : 'text-slate-600'
+            className={`flex flex-col items-center gap-1 text-xs font-semibold py-1.5 px-2.5 rounded-lg ${
+              activeTab === 'cashflow' ? 'text-purple-700 font-bold bg-purple-50' : 'text-slate-600'
             }`}
           >
             <TrendingUp className="w-4.5 h-4.5" />
-            <span>Fluxo de Caixa</span>
+            <span>Fluxo Caixa</span>
           </button>
         </div>
       </div>
